@@ -1,0 +1,17 @@
+{
+  "name": "Dulle – Doppelkopf",
+  "short_name": "Dulle",
+  "description": "Doppelkopf mitschreiben: Spielblock, Abrechnung, Statistik",
+  "lang": "de",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F3EFE6",
+  "theme_color": "#1D4A39",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

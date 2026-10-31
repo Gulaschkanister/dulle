@@ -1,0 +1,82 @@
+/* Tokens aus .claude/skills/design/DESIGN.md (Theme „Stammtisch“). Nur hier stehen Werte. */
+
+@font-face { font-family: "Barlow"; font-weight: 400; font-display: swap; src: url("../schriften/barlow-400.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 600; font-display: swap; src: url("../schriften/barlow-600.woff2") format("woff2"); }
+@font-face { font-family: "Fraunces"; font-weight: 600; font-display: swap; src: url("../schriften/fraunces-600.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400 600; font-display: swap; src: url("../schriften/jetbrains-mono.woff2") format("woff2"); }
+
+:root {
+  color-scheme: light dark;
+
+  --background: #F3EFE6;
+  --surface: #FFFDF8;
+  --ink: #1C1A16;
+  --ink-muted: #5C564B;
+  --line: #DDD5C6;
+  --accent: #1F5C45;
+  --on-accent: #FFFFFF;
+  --re: #1F4E8C;
+  --kontra: #A23B1E;
+  --warning: #8A5A00;
+  --danger: #B3261E;
+
+  /* Spielblock wie Papier (Spec 006). plus/minus nie allein: Vorzeichen steht immer dabei. */
+  --paper: #FBF6EA;
+  --paper-line: #E4D9C3;
+  --paper-margin: #D9A79B;
+  --plus: var(--accent);
+  --minus: var(--kontra);
+  --zuletzt: rgb(242 193 78 / .18);
+
+  --felt: #1D4A39;
+  --felt-deep: #143528;
+  --on-felt: #E9F1EC;
+  --on-felt-muted: #B5CCC0;
+
+  --family: "Barlow", system-ui, sans-serif;
+  --family-display: "Fraunces", Georgia, serif;
+  --family-mono: "JetBrains Mono", ui-monospace, monospace;
+  --size-small: 14px;
+  --size-body: 16px;
+  --size-h3: 20px;
+  --size-h2: 28px;
+  --size-h1: 40px;
+  --weight-regular: 400;
+  --weight-strong: 600;
+  --lh-body: 1.45;
+  --lh-heading: 1.15;
+
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px; --s8: 64px;
+  --r-sm: 4px; --r-md: 8px; --r-lg: 12px;
+  --tipp: 44px;
+  --tipp-haupt: 52px;
+
+  --motion-fast: 140ms;
+  --motion-base: 240ms;
+  --motion-slow: 420ms;
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #121513;
+    --surface: #1B201D;
+    --ink: #ECE8DF;
+    --ink-muted: #A9A397;
+    --line: #2E3530;
+    --accent: #5FBF93;
+    --on-accent: #0C1E16;
+    --re: #7FA8E8;
+    --kontra: #E8876A;
+    --warning: #E9A553;
+    --danger: #F2837A;
+    --paper: #20261F;
+    --paper-line: #343C33;
+    --paper-margin: #6B3F38;
+    --zuletzt: rgb(242 193 78 / .07);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --motion-fast: 0ms; --motion-base: 0ms; --motion-slow: 0ms; }
+}

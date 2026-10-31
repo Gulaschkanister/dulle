@@ -1,0 +1,441 @@
+/* Komponenten. Werte ausschließlich über die Variablen aus tokens.css. */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { margin: 0; }
+body {
+  background: var(--background);
+  color: var(--ink);
+  font: var(--weight-regular) var(--size-body) / var(--lh-body) var(--family);
+  -webkit-text-size-adjust: 100%;
+}
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.seite {
+  min-height: 100dvh;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: calc(var(--s5) + env(safe-area-inset-top)) calc(var(--s5) + env(safe-area-inset-right)) calc(var(--s5) + env(safe-area-inset-bottom)) calc(var(--s5) + env(safe-area-inset-left));
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+}
+.seite > .dehnen { flex-grow: 1; }
+
+h1, h2, h3 { margin: 0; font-weight: var(--weight-strong); line-height: var(--lh-heading); }
+h1 { font-family: var(--family-display); font-size: var(--size-h2); }
+h2 { font-size: var(--size-body); color: var(--ink-muted); }
+.leise { color: var(--ink-muted); font-size: var(--size-small); }
+.zahl { font-family: var(--family-mono); font-variant-numeric: tabular-nums; }
+
+.kopf { display: flex; align-items: flex-start; gap: var(--s3); }
+.kopf > .titel { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex-grow: 1; }
+.kopf h1 { font-size: clamp(22px, 7.5vw, var(--size-h2)); overflow-wrap: anywhere; hyphens: auto; }
+.kopf > :not(.titel) { flex: none; }
+.kopf .unterzeile { color: var(--ink-muted); font-size: var(--size-small); }
+
+.gruppe { display: flex; flex-direction: column; gap: var(--s2); }
+.zeile { display: flex; gap: var(--s3); align-items: center; }
+.raster-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s2); }
+.raster-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s2); }
+
+/* Knöpfe */
+button, .knopf { font: inherit; color: inherit; }
+.knopf {
+  min-height: var(--tipp);
+  padding: 0 var(--s4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: var(--weight-strong);
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--s2);
+  cursor: pointer;
+  text-decoration: none;
+}
+.knopf.haupt { background: var(--accent); color: var(--on-accent); border-color: var(--accent); min-height: var(--tipp-haupt); width: 100%; font-size: 17px; }
+.knopf.haupt:disabled { background: var(--ink-muted); border-color: var(--ink-muted); color: var(--surface); cursor: default; }
+.knopf.text { border: 0; background: transparent; padding: 0 var(--s1); text-decoration: underline; text-underline-offset: 3px; }
+.knopf.gefahr { color: var(--danger); }
+
+.wahl {
+  min-height: var(--tipp);
+  padding: 0 var(--s3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: var(--s2);
+}
+.wahl { min-width: 0; }
+.kuerzen { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wahl[aria-pressed="true"], .wahl[aria-checked="true"] { border: 2px solid var(--accent); font-weight: var(--weight-strong); }
+.wahl .marke { font-size: 13px; color: var(--re); }
+.wahl.neu { border-style: dashed; color: var(--ink-muted); }
+
+.segment { display: grid; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column; border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
+.segment button { min-height: var(--tipp); border: 0; background: var(--surface); color: var(--ink); font-weight: var(--weight-strong); cursor: pointer; }
+.segment button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+
+.chips { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.chip { display: inline-flex; align-items: center; gap: var(--s1); min-height: var(--tipp); padding: 0 var(--s4); border: 1px solid var(--line); border-radius: 22px; background: var(--surface); color: var(--ink); cursor: pointer; }
+.chip.ausgeblendet { color: var(--ink-muted); text-decoration: line-through; }
+.chip.neu { border-style: dashed; color: var(--ink-muted); }
+
+/* Formulare */
+label { font-size: var(--size-small); font-weight: var(--weight-strong); }
+input[type="text"], input[type="url"], input[type="password"], textarea {
+  min-height: var(--tipp);
+  padding: 0 var(--s3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  width: 100%;
+}
+select { min-height: var(--tipp); padding: 0 var(--s2); border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); color: var(--ink); font: inherit; }
+/* Aufklappbare Bereiche (details) ordnen nicht als Spalte an: Abstände und Blöcke selbst setzen. */
+details.gruppe > label { display: block; margin-top: var(--s3); }
+details.gruppe > input { display: block; margin-top: var(--s1); }
+details.gruppe > :is(p, .chips, .raster-2, .knopf) { margin-top: var(--s2); }
+textarea { padding: var(--s2) var(--s3); }
+.stepper { display: flex; align-items: center; gap: var(--s3); }
+.stepper .knopf { flex: none; width: var(--tipp); padding: 0; font-size: var(--size-h3); }
+.stepper .wert { flex: none; width: 64px; text-align: center; font: var(--weight-strong) var(--size-h2) / 1 var(--family-display); border: 0; background: transparent; color: var(--ink); }
+
+/* Karten und Listen */
+.karte { padding: var(--s4); border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); display: flex; flex-direction: column; gap: var(--s2); }
+.liste { display: flex; flex-direction: column; }
+.liste > * { min-height: 48px; display: flex; align-items: baseline; gap: var(--s2); padding: var(--s2) 0; border-bottom: 1px solid var(--line); }
+.liste a { color: inherit; text-decoration: none; }
+
+.hinweis { display: flex; gap: var(--s3); align-items: flex-start; padding: var(--s3) var(--s4); border: 1px solid var(--warning); border-radius: var(--r-md); background: var(--surface); font-size: var(--size-small); }
+.hinweis.fehler { border-color: var(--danger); }
+.leer { padding: var(--s5) 0; color: var(--ink-muted); }
+
+/* Spielblock wie ein Doppelkopfblock (Spec 006) */
+.block { position: relative; background: var(--paper); border-radius: 6px; box-shadow: 0 2px 0 var(--paper-line), 0 8px 20px rgb(0 0 0 / .12); overflow: hidden; }
+.block::before { content: ""; position: absolute; left: 42px; top: 0; bottom: 0; width: 1px; background: var(--paper-margin); pointer-events: none; }
+.block-zeile {
+  display: grid;
+  grid-template-columns: 42px repeat(var(--spalten, 4), minmax(0, 1fr)) 44px;
+  align-items: center;
+  min-height: 46px;
+  border-bottom: 1px solid var(--paper-line);
+  font: var(--weight-strong) 20px var(--family-display);
+  font-variant-numeric: tabular-nums;
+  width: 100%;
+  padding: 0;
+  border-left: 0; border-right: 0; border-top: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: right;
+  cursor: pointer;
+}
+.block-zeile > span { padding-right: var(--s2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.block-zeile > span:first-child { text-align: left; padding-left: var(--s2); color: var(--ink-muted); font: var(--weight-regular) var(--size-small) var(--family); }
+.block-zeile > span:last-child { font: var(--weight-regular) var(--size-small) var(--family); color: var(--ink-muted); }
+.block-zeile.kopfzeile { font: var(--weight-strong) var(--size-small) var(--family); color: var(--ink-muted); cursor: default; min-height: 44px; border-bottom: 2px solid var(--paper-line); }
+.block-zeile.summe { min-height: 56px; font-size: 24px; border-top: 3px double var(--ink); border-bottom: 0; cursor: default; }
+.block-zeile.summe > span:first-child { font: var(--weight-strong) 18px var(--family-display); color: var(--ink); }
+.block-zeile .plus { color: var(--plus); }
+.block-zeile .minus { color: var(--minus); }
+.block-zeile .null { color: var(--ink-muted); }
+.block-zeile .gewinner { text-decoration: underline 2px; text-underline-offset: 4px; }
+.block-zeile.verworfen > span { text-decoration: line-through; color: var(--ink-muted); }
+.block-zeile.zuletzt { background: var(--zuletzt); }
+.block-zeile.neu { animation: einschieben var(--motion-base) var(--ease-out); }
+.kennung { color: var(--ink-muted); }
+@keyframes einschieben { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+/* Tisch-Skizze */
+.tisch { position: relative; height: 230px; }
+.tisch .filz { position: absolute; left: 50%; top: 52px; width: 190px; height: 126px; margin-left: -95px; border-radius: 20px; background: var(--felt); }
+.tisch .sitz { position: absolute; width: 96px; padding: 0 var(--s1); overflow: hidden; white-space: nowrap; min-height: var(--tipp); border-radius: var(--r-md); display: flex; align-items: center; justify-content: center; gap: 6px; border: 1px dashed var(--ink-muted); color: var(--ink-muted); background: transparent; }
+.tisch .sitz.belegt { border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-weight: var(--weight-strong); }
+.tisch .sitz.naechster { border: 2px dashed var(--accent); }
+.tisch .sitz .nr { font: var(--weight-strong) 12px var(--family-mono); color: var(--ink-muted); }
+.tisch .p1 { left: 50%; margin-left: -48px; bottom: 0; }
+.tisch .p2 { left: 0; top: 93px; }
+.tisch .p3 { left: 50%; margin-left: -48px; top: 0; }
+.tisch .p4 { right: 0; top: 93px; }
+
+/* Vorschau der Punkte */
+.verteilung { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s1); padding-top: var(--s2); border-top: 1px solid var(--line); }
+.verteilung > div { display: flex; flex-direction: column; align-items: center; min-width: 0; }
+.verteilung .name { font-size: 13px; color: var(--ink-muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.verteilung .wert { font: var(--weight-strong) var(--size-body) var(--family-mono); }
+
+/* Blatt (Overlay von unten) */
+.blatt-hintergrund { position: fixed; inset: 0; background: rgb(0 0 0 / .4); display: flex; align-items: flex-end; justify-content: center; z-index: 10; }
+.blatt { animation: hochfahren var(--motion-base) var(--ease-out); width: 100%; max-width: 480px; background: var(--surface); border-radius: var(--r-lg) var(--r-lg) 0 0; padding: var(--s5) var(--s5) calc(var(--s5) + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: var(--s3); max-height: 90dvh; overflow-y: auto; }
+
+/* Rückgängig-Hinweis */
+.toast {
+  position: fixed; left: 50%; bottom: calc(var(--s5) + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  width: min(432px, calc(100% - 2 * var(--s5)));
+  display: flex; align-items: center; gap: var(--s3);
+  padding: var(--s2) var(--s2) var(--s2) var(--s4);
+  border-radius: var(--r-md); background: var(--ink); color: var(--background);
+  animation: einblenden var(--motion-base) var(--ease-out);
+  z-index: 20;
+}
+.toast .text { flex-grow: 1; }
+.toast button { min-height: var(--tipp); padding: 0 var(--s3); border: 0; background: transparent; color: var(--background); font-weight: var(--weight-strong); text-decoration: underline; cursor: pointer; }
+/* Fußleiste: bleibt unten sichtbar (Spielblock) */
+.fussleiste {
+  position: sticky; bottom: 0; z-index: 5;
+  margin: 0 calc(-1 * var(--s5)) calc(-1 * (var(--s5) + env(safe-area-inset-bottom)));
+  padding: var(--s3) var(--s5) calc(var(--s5) + env(safe-area-inset-bottom));
+  background: var(--background);
+  border-top: 1px solid var(--line);
+  display: flex; flex-direction: column; gap: var(--s2);
+}
+/* Rückgängig-Hinweis über der Fußleiste, nicht darauf */
+body:has(.fussleiste) .toast { bottom: calc(var(--tipp-haupt) + 72px + env(safe-area-inset-bottom)); }
+body:has(.fussleiste) .mit-toast .seite { padding-bottom: calc(var(--s5) + env(safe-area-inset-bottom)); }
+.mit-toast .seite { padding-bottom: calc(var(--s5) + 76px + env(safe-area-inset-bottom)); }
+@keyframes einblenden { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+.unsichtbar { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@keyframes hochfahren { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Filzkopf (Spec 006) */
+.filzkopf {
+  position: relative;
+  overflow: hidden;
+  background: var(--felt);
+  color: var(--on-felt);
+  margin: calc(-1 * (var(--s5) + env(safe-area-inset-top))) calc(-1 * var(--s5)) 0;
+  padding: calc(var(--s6) + env(safe-area-inset-top)) var(--s5) var(--s6);
+  display: flex; flex-wrap: wrap; gap: var(--s3); align-items: flex-start;
+}
+.filzkopf.mit-block { padding-bottom: 40px; margin-bottom: -38px; }
+.filzkopf .titel { position: relative; display: flex; flex-direction: column; gap: 6px; min-width: 0; flex-grow: 1; max-width: calc(100% - 120px); }
+.filzkopf.schmal .titel { max-width: none; }
+.filzkopf h1 { color: #FBF8F1; font-size: clamp(22px, 7.5vw, var(--size-h2)); overflow-wrap: anywhere; hyphens: auto; }
+.filzkopf .unterzeile { color: var(--on-felt-muted); font-size: var(--size-small); }
+.filzkopf .aktionen { position: relative; flex-basis: 100%; display: flex; flex-wrap: wrap; gap: var(--s2); }
+.filzkopf .knopf { background: transparent; color: var(--on-felt); border-color: rgb(233 241 236 / .4); min-height: 40px; }
+.filzkopf :focus-visible { outline-color: #F2C14E; }
+.filzkopf .rechts { flex: none; position: relative; }
+.karten-motiv { position: absolute; right: -10px; top: calc(14px + env(safe-area-inset-top)); width: 140px; height: 110px; pointer-events: none; }
+.mini-karte { position: absolute; width: 44px; height: 62px; border: 1px solid var(--line); border-radius: 5px; background: #FBF8F1; font: var(--weight-strong) 13px/1 var(--family-display); }
+.mini-karte span { position: absolute; left: 4px; top: 4px; }
+.mini-karte svg { position: absolute; right: 4px; bottom: 5px; width: 20px; height: 20px; }
+.block-huelle { position: relative; }
+
+/* Chips ploppen beim Hinzufügen auf */
+.chip.neu-dazu { animation: ploppen var(--motion-base) var(--ease-out); }
+@keyframes ploppen { from { transform: scale(.85); opacity: 0; } to { transform: none; opacity: 1; } }
+.chip .weg { width: 32px; height: 32px; margin-right: -8px; border: 0; border-radius: 16px; background: transparent; color: var(--ink-muted); font-size: 18px; cursor: pointer; }
+
+/* Seitenwechsel: Filzkopf bleibt stehen, der Inhalt blendet ein (keine View Transitions, siehe CLAUDE.md) */
+.seitenwechsel > :not(.filzkopf) { animation: inhaltEin var(--motion-base) var(--ease-out); }
+@keyframes inhaltEin { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* Rechner (Spec 002) */
+.segment button { padding: 0 var(--s1); }
+.sp-reihe { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s4); }
+.sp-reihe .stepper { flex: none; }
+
+/* Abrechnung (Spec 003) */
+.hinweis.info { border-color: var(--accent); }
+.endstand { display: flex; flex-direction: column; }
+.endstand-zeile { display: flex; align-items: baseline; gap: var(--s3); padding: var(--s2) 0; border-bottom: 1px solid var(--line); }
+.endstand-zeile:last-child { border-bottom: 0; }
+.endstand-zeile .platz { width: 24px; flex: none; color: var(--ink-muted); }
+.endstand-zeile .name { flex-grow: 1; min-width: 0; font-weight: var(--weight-strong); font-size: var(--size-h3); }
+.endstand-zeile .punkte { flex: none; font: var(--weight-strong) var(--size-h2) / 1 var(--family-display); font-variant-numeric: tabular-nums; }
+.endstand-zeile .punkte.plus { color: var(--plus); }
+.endstand-zeile .punkte.minus { color: var(--minus); }
+.betrag { flex: none; min-width: 76px; text-align: right; font-family: var(--family-mono); font-variant-numeric: tabular-nums; }
+.kacheln { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s2); }
+.kachel { padding: var(--s3); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); }
+.kachel-wert { font: var(--weight-strong) var(--size-h3) / 1.2 var(--family-display); }
+
+/* Statistik (Spec 004) */
+.kopfzahlen { display: flex; flex-wrap: wrap; gap: var(--s3) var(--s5, 24px); }
+.kopfzahl { font: var(--weight-strong) 32px / 1 var(--family-display); font-variant-numeric: tabular-nums; }
+.kennzahlen { display: flex; flex-direction: column; }
+.kennzahl-zeile { display: flex; align-items: baseline; gap: var(--s2); padding: 10px 0; border-bottom: 1px solid var(--line); }
+.kennzahl-wert { flex: none; max-width: 55%; text-align: right; font: var(--weight-strong) 16px var(--family-mono); font-variant-numeric: tabular-nums; }
+a.endstand-zeile:hover .name { text-decoration: underline; }
+
+/* Karten (Spec 011). Kartenpapier bleibt im dunklen Modus hell, wie echte Karten. */
+.spielkarte { position: relative; flex: none; box-sizing: border-box; padding: 0; border: 1px solid #DDD5C6; border-radius: 7px;
+  background: #FBF8F1; font-family: var(--family-display); color: #1C1A16; }
+.spielkarte.hand { width: 70px; height: 98px; }
+.spielkarte.stich { width: 62px; height: 87px; }
+.spielkarte.klein { width: 44px; height: 62px; border-radius: 5px; }
+.spielkarte .rang { position: absolute; left: 6px; top: 5px; font-size: 19px; font-weight: 600; line-height: 1; }
+.spielkarte .sym-klein { position: absolute; left: 6px; top: 27px; width: 13px; height: 13px; }
+.spielkarte .sym-gross { position: absolute; right: 7px; bottom: 8px; width: 30px; height: 30px; }
+.spielkarte.stich .rang { font-size: 17px; }
+.spielkarte.stich .sym-gross { width: 28px; height: 28px; }
+.spielkarte.klein .rang { left: 4px; top: 3px; font-size: 13px; }
+.spielkarte.klein .sym-klein { left: 4px; top: 18px; width: 9px; height: 9px; }
+.spielkarte.klein .sym-gross { right: 4px; bottom: 5px; width: 18px; height: 18px; }
+button.spielkarte { cursor: pointer; transition: transform var(--motion-fast, 140ms) cubic-bezier(.34, 1.56, .64, 1); }
+button.spielkarte.spielbar { transform: translateY(-18px); border: 2px solid #F2C14E; box-shadow: 0 10px 20px rgba(0, 0, 0, .35); }
+button.spielkarte.gedaempft { opacity: .45; cursor: default; }
+button.spielkarte:focus-visible { outline: 2px solid #F2C14E; outline-offset: 2px; }
+.spielkarte.ruecken { border-color: rgba(255, 255, 255, .25); display: flex; align-items: center; justify-content: center; }
+.spielkarte.ruecken .monogramm { color: #F3EFE6; font: 600 16px var(--family-display); opacity: .8; }
+/* Spec 020: eigene Gestaltung. Foto und Elemente liegen unten, Rang und Symbole immer obenauf. */
+.spielkarte { overflow: hidden; }
+.spielkarte.gross { width: 200px; height: 280px; border-radius: 14px; }
+.spielkarte.gross .rang { left: 14px; top: 12px; font-size: 52px; }
+.spielkarte.gross .sym-klein { left: 15px; top: 70px; width: 34px; height: 34px; }
+.spielkarte.gross .sym-gross { right: 16px; bottom: 18px; width: 84px; height: 84px; }
+.spielkarte .karten-bild { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; pointer-events: none; }
+.spielkarte .karten-elemente { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; overflow: visible; }
+.spielkarte .rang, .spielkarte .sym-klein, .spielkarte .sym-gross { z-index: 2; }
+.spielkarte.mit-bild .rang, .spielkarte.mit-bild .sym-klein, .spielkarte.mit-bild .sym-gross { background: rgba(251, 248, 241, .92); border-radius: 4px; box-shadow: 0 0 0 2px rgba(251, 248, 241, .92); }
+.spielkarte.stil-modern { border-left: 5px solid var(--kartenfarbe); }
+.spielkarte.stil-modern .rang { letter-spacing: -.03em; }
+/* Minimal: Ecke bleibt vollständig (Rang und Symbol, Fächer!); zurückgenommen wird nur das große Symbol. */
+.spielkarte.stil-minimal .sym-gross { opacity: .35; }
+.spielkarte.stil-verspielt { border-radius: 12px; background-image: radial-gradient(rgba(28, 26, 22, .07) 1px, transparent 1.6px); background-size: 7px 7px; }
+.spielkarte.stil-verspielt .rang { font-family: var(--family-display); }
+.spielkarte.ruecken .ruecken-text { hyphens: auto; overflow-wrap: break-word; line-height: 1.1; position: relative; z-index: 2; color: #F3EFE6; font: 600 13px var(--family-display); text-align: center; padding: 0 4px; text-shadow: 0 1px 2px rgba(0, 0, 0, .5); }
+.spielkarte.gross.ruecken .ruecken-text, .spielkarte.gross.ruecken .monogramm { font-size: 30px; }
+.liste-saetze { display: flex; flex-direction: column; gap: var(--s2); }
+/* Spec 020: Card Builder */
+.datei-knopf { position: relative; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.datei-knopf:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.builder-vorschau { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; justify-content: center; gap: var(--s3); padding: var(--s2) 0;
+  background: var(--paper, var(--surface)); border-bottom: 1px solid var(--line); }
+.builder-vorschau .satz-reihe .spielkarte + .spielkarte { margin-left: -34px; }
+/* Quer und niedrig: Die Leiste klebt nicht oben, sonst frisst sie ein Drittel der Höhe (UI 020). */
+@media (orientation: landscape) and (max-height: 500px) { .builder-vorschau { position: static; } }
+.farb-zeile { display: grid; grid-template-columns: minmax(0, 1fr) 48px; gap: var(--s2); align-items: center; padding: var(--s2) 0; border-bottom: 1px solid var(--line); }
+.farb-zeile select, .farb-zeile .datei-knopf { grid-column: 1 / -1; }
+.farb-zeile input[type="color"], .farbfeld input[type="color"], .builder-editor input[type="color"] { width: 48px; height: 44px; padding: 2px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); }
+.wert-zeile { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: var(--s2); }
+.wert-zeile .kurz { text-align: center; }
+.farbfeld { display: inline-flex; align-items: center; gap: var(--s2); }
+.karten-raster { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; justify-items: center; }
+.sticker-raster { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s2); }
+.sticker-raster .sticker svg { width: 28px; height: 28px; }
+.buehne { position: relative; align-self: center; width: 200px; height: 280px; touch-action: none; }
+.buehne .editor-ebene { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 3; }
+.editor-ebene .griff { fill: transparent; stroke: rgba(28, 26, 22, .25); stroke-width: .6; stroke-dasharray: 2 2; cursor: grab; }
+.editor-ebene .griff.gewaehlt { stroke: var(--accent); stroke-width: 1; stroke-dasharray: 3 2; }
+.builder-aktionen { position: sticky; bottom: 0; z-index: 3; display: flex; flex-direction: column; gap: var(--s2); padding: var(--s2) 0 var(--s3);
+  background: var(--background); border-top: 1px solid var(--line); }
+.builder-editor { border: 2px solid var(--accent); border-radius: var(--r-md); padding: var(--s3); }
+@media (orientation: landscape) and (min-width: 700px) {
+  .builder-editor { display: grid; grid-template-columns: 220px minmax(0, 1fr); align-items: start; }
+  .builder-editor > :first-child { grid-column: 1 / -1; }
+  .builder-editor .buehne { grid-row: 2 / span 6; }
+}
+.satz-wahl { flex-direction: column; align-items: flex-start; gap: var(--s2); padding: var(--s3); min-height: 0; text-align: left; }
+.satz-kopf { display: flex; flex-direction: column; }
+.satz-reihe { display: flex; }
+.satz-reihe .spielkarte + .spielkarte { margin-left: -6px; }
+
+/* Tisch eröffnen und Beitreten (Spec 010) */
+.plaetze { display: flex; flex-direction: column; }
+.platz-zeile { display: flex; align-items: center; gap: var(--s3); min-height: 52px; border-bottom: 1px solid var(--line); }
+.platz-nr { width: 18px; font-family: var(--family-mono); color: var(--ink-muted); }
+.platz-name { flex-grow: 1; min-width: 0; font-weight: var(--weight-strong); overflow-wrap: anywhere; }
+.platz-status { color: var(--ink-muted); font-size: var(--size-small); }
+.platz-status::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--warning); }
+.platz-status.ok::before { background: var(--accent); }
+.einladung { align-items: stretch; }
+.qr { align-self: center; background: #FFFFFF; padding: 10px; border-radius: 8px; }
+.qr svg { display: block; width: min(72vw, 300px); height: auto; }
+/* Verbinden über den Link: nativer Fortschrittsbalken ohne Wert (läuft von selbst). */
+progress.laedt { width: 100%; height: 6px; accent-color: var(--accent); }
+@media (prefers-reduced-motion: reduce) { progress.laedt { display: none; } }
+.qr-laedt { width: min(72vw, 300px); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; color: #5C564B; font-size: var(--size-small); }
+.scanner { width: 100%; border-radius: 8px; background: #000; }
+.einladung textarea { width: 100%; box-sizing: border-box; font: 12px var(--family-mono); }
+.wahl.neu { border-style: dashed; }
+
+/* Spieltisch (Spec 010, Mockup „Spieltisch“, quer) */
+.spieltisch { position: fixed; inset: 0; height: auto; overflow: hidden; background: var(--felt); color: #E9F1EC; font-family: var(--family);
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left); }
+.tisch-oval { position: absolute; left: 50%; top: 47%; width: min(46vw, 360px); height: min(56vh, 220px); transform: translate(-50%, -50%); border-radius: 50%; background: var(--felt-deep); }
+.tisch-kopf { position: absolute; left: 12px; right: 12px; top: 8px; display: flex; align-items: center; gap: 10px; z-index: 2; }
+.tisch-info { font-size: 14px; color: #B5CCC0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tisch-knopf { min-height: 36px; padding: 0 14px; border-radius: 8px; border: 1px solid rgba(233, 241, 236, .35); background: transparent; color: #E9F1EC; font: 600 14px var(--family); cursor: pointer; }
+.tisch-knopf.gross { min-height: 44px; }
+.tisch-knopf:focus-visible { outline: 2px solid #F2C14E; outline-offset: 2px; }
+.partei-marke { font-size: 14px; white-space: nowrap; }
+.partei-marke::before, .gegner-marke::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; }
+.partei-marke.re::before, .gegner-marke.re::before { background: #7FA8E8; }
+.partei-marke.kontra::before, .gegner-marke.kontra::before { background: #E8876A; }
+.gegner { position: absolute; width: 150px; z-index: 1; }
+.gegner.links { left: 14px; top: 34%; }
+.gegner.rechts { right: 14px; top: 34%; text-align: right; }
+.gegner.oben { left: 50%; top: 40px; transform: translateX(-50%); text-align: center; }
+.gegner-name { font-size: 16px; font-weight: 600; }
+.gegner.am-zug .gegner-name { color: #F2C14E; }
+.gegner.am-zug .gegner-name::after { content: " · am Zug"; font-size: 13px; font-weight: 400; }
+.gegner-info { font-size: 13px; color: #B5CCC0; }
+.gegner-warnung { font-size: 13px; font-weight: 600; color: #E9A553; }
+/* Spec 013: KI spielt für jemanden. Kein Alarm, nur ein Hinweis. */
+.gegner-ki { font-size: 13px; font-weight: 600; color: #B5CCC0; }
+.gegner-marke { margin-top: 4px; font-size: 14px; font-weight: 600; }
+.tisch-mitte { position: absolute; left: 50%; top: 47%; width: 230px; height: 170px; transform: translate(-50%, -50%); }
+.stich-platz { position: absolute; }
+.stich-platz.unten { left: 84px; top: 82px; }
+.stich-platz.oben { left: 84px; top: 0; }
+.stich-platz.links { left: 6px; top: 40px; }
+.stich-platz.rechts { left: 162px; top: 40px; }
+.stich-platz .spielkarte { animation: ploppen var(--motion-fast) ease-out; }
+.stich-text { position: absolute; left: 50%; bottom: -22px; transform: translateX(-50%); font-size: 13px; color: #B5CCC0; white-space: nowrap; }
+.tisch-status { position: absolute; left: 14px; bottom: 96px; z-index: 1; }
+.tisch-status .dran { font-size: 16px; font-weight: 600; color: #F2C14E; }
+.leise-hell { font-size: 13px; color: #B5CCC0; }
+.ansage { position: absolute; right: 14px; bottom: 96px; display: flex; gap: 6px; z-index: 2; }
+.hand-faecher { position: absolute; left: 50%; bottom: -14px; transform: translateX(-50%); display: flex; align-items: flex-end; z-index: 1; }
+.hand-faecher .spielkarte + .spielkarte { margin-left: -22px; }
+.hand-faecher .spielkarte { color: #1C1A16; }
+/* Kein Einblenden der Teile beim Seitenwechsel: es würde die Zentrierung per transform überschreiben. */
+.spieltisch.seitenwechsel > * { animation: none; }
+.tisch-panel { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%); width: min(460px, 92vw); max-height: 70vh; overflow: auto; box-sizing: border-box;
+  padding: 16px 18px; border-radius: 12px; background: var(--paper); color: var(--ink); display: flex; flex-direction: column; gap: 10px; z-index: 3;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .35); }
+.tisch-panel.klein { top: 30%; }
+/* Spec 012: Rückkehr mit QR neben dem Text, damit es quer auf 375 px Höhe passt. */
+.tisch-panel.breit { width: min(600px, 94vw); max-height: 88vh; top: 50%; gap: 8px; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .5); }
+/* Entscheidung: Die Gegner links und rechts (mit Zähler) bleiben lesbar. */
+.tisch-panel.schmal { width: min(460px, calc(100vw - 280px)); }
+@media (max-width: 700px) { .gegner-warnung .zaehler { display: block; } .gegner-warnung .trenner { display: none; } }
+.zurueck-qr { display: flex; gap: 14px; align-items: center; }
+.zurueck-qr .qr { padding: 6px; flex-shrink: 0; }
+.zurueck-qr .qr svg, .zurueck-qr .qr-laedt { width: min(56vh, 220px); }
+.zurueck-qr .spalte { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.tisch-panel textarea { width: 100%; box-sizing: border-box; font: 12px var(--family-mono); }
+.tisch-panel .scanner { max-height: 40vh; object-fit: cover; }
+.uebernahme { display: flex; flex-direction: column; gap: 6px; padding-top: 8px; border-top: 1px solid var(--line); }
+.tisch-knopf.hervor { display: inline-flex; align-items: center; min-height: 44px; text-decoration: none; background: #FBF8F1; border-color: #FBF8F1; color: #1C1A16; white-space: nowrap; }
+.tisch-panel h2 { margin: 0; font: 600 20px/1.15 var(--family-display); }
+.vorbehalt-stand { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 14px; color: var(--ink-muted); }
+.solo-raster { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.solo-raster .knopf { padding: 0 4px; }
+.tisch-meldung { position: absolute; left: 50%; top: 44px; transform: translateX(-50%); max-width: 80vw; padding: 8px 14px; border-radius: 8px;
+  background: var(--paper); color: var(--ink); font-size: 14px; z-index: 4; box-shadow: 0 6px 16px rgba(0, 0, 0, .3); }
+.hochkant { display: none; }
+@media (orientation: portrait) {
+  .spieltisch .hochkant { display: flex; position: absolute; inset: 0; z-index: 5; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    background: var(--felt); color: #E9F1EC; font-size: 18px; text-align: center; padding: 24px; }
+}
+@media (max-height: 380px) {
+  .hand-faecher .spielkarte + .spielkarte { margin-left: -26px; }
+  .tisch-status, .ansage { bottom: 88px; }
+}
+/* Wer dran ist, hebt spielbare Karten an: Die Status-Zeile (mit „… liegt vorn“) rückt darüber (UI-Prüfung Sandbox). */
+.spieltisch[data-am-zug="ja"] .tisch-status { bottom: 112px; }
+.tisch-kopf .dehnen { flex-grow: 1; }
+.tisch-panel h2 { color: var(--ink); }
+.tisch-oval, .tisch-mitte { top: 51%; }
+
+.wahl:disabled { opacity: .55; cursor: default; }
