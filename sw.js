@@ -1,7 +1,7 @@
 // Service Worker (Spec 001): speichert alle App-Dateien und liefert sie offline aus.
 // VERSION und DATEIEN setzt werkzeuge/bauen.mjs beim Bauen ein.
 
-const VERSION = "0.1.0-1d80893766";
+const VERSION = "0.1.0-b1dfdb14fa";
 const DATEIEN = [
   "./",
   "./app/kern/abrechnung.js",
@@ -93,7 +93,8 @@ const DATEIEN = [
   "./schriften/fraunces-600.woff2",
   "./schriften/jetbrains-mono.woff2",
   "./stil/app.css",
-  "./stil/tokens.css"
+  "./stil/tokens.css",
+  "./version.json"
 ];
 const CACHE = `dulle-${VERSION}`;
 

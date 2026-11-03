@@ -113,7 +113,16 @@ export async function eroeffne(app, rundeId, profil, eigenerSpielerId, eigenerPl
         await g.uebernimm();
     const client = new Mitspieler(g.eigenerKanal());
     aktiv = { rolle: "gastgeber", rundeId, gastgeber: g, client, einladungen: new Map(), antwort: null, neu: null, fehler: null };
-    g.beiAenderung = () => app.zeichne();
+    g.beiAenderung = () => {
+        // Eine angenommene Einladung ist erledigt, sobald der Platz verbunden ist; sonst stünde sie nach einer späteren
+        // Trennung wieder da („Verbindung wird aufgebaut …“). Bei „KI spielt für“ hält die KI den Kanal, die Einladung bleibt.
+        const t = aktiv;
+        if (t?.gastgeber === g)
+            for (const [p, e] of t.einladungen)
+                if (e.link && !e.annehmen && g.verbunden(p) && !g.zustand.plaetze[p - 1].ki)
+                    t.einladungen.delete(p);
+        app.zeichne();
+    };
     client.beiAenderung = () => app.zeichne();
     schreibeLokal(LETZTER_STAND, null);
     if (!zustand) {
