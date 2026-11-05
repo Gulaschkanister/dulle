@@ -1,24 +1,36 @@
-// Start: offener Abend → direkt zum Spielblock, sonst die Runden. Dazu der Einstieg ins Live-Spiel (Spec 010, Ergänzung).
+// Start: offener Abend → direkt zum Spielblock, sonst die Runden. Dazu die Einstiege ins Live-Spiel (Spec 010, Ergänzung)
+// und „Gegen die KI üben“ (Spec 016).
 import { filzkopf, homeHinweis, meldung } from "../bausteine.js";
 import { h } from "../dom.js";
 import { ladenKnopf } from "../sicherung.js";
-import { fortsetzen, fortsetzenAlsMitspieler, gespeicherterTisch, letzterStand, tisch } from "../tisch.js";
+import { leseLokal, schreibeLokal } from "../app.js";
+import { fortsetzen, fortsetzenAlsMitspieler, gespeicherterTisch, letzterStand, tisch, ueben } from "../tisch.js";
+/** Spec 016: „Live spielen“ ohne Runde: Nach „Runde anlegen“ geht es an den Tisch, nicht zum Schreiber. */
+export const NACH_ANLEGEN = "dulle.nachAnlegen";
 export function start(app) {
-    // Ein offener Schreiber-Abend öffnet sich beim Start direkt; ein Tisch am Handy über den Hinweis unten.
-    const offen = app.ersteAnsicht ? app.offeneSitzung() : undefined;
-    if (offen && offen.sitzung.modus === "schreiber") {
+    // Ein offener Abend, den dieses Gerät schreibt, öffnet sich beim Start direkt; ein Tisch über den Hinweis unten.
+    const offen = app.ersteAnsicht ? app.offeneSitzung(undefined, true) : undefined;
+    if (offen && !offen.sitzung.kiPlatz && !gespeicherterTisch()) {
         queueMicrotask(() => app.geheZu(`/abend/${offen.sitzung.id}`));
         return h("div", { class: "seite" });
     }
     const runden = Object.values(app.sicht).sort((a, b) => a.name.localeCompare(b.name, "de"));
-    return h("div", { class: "seite" }, filzkopf("Dulle", "Doppelkopf mitschreiben und live spielen", { motiv: true, aktionen: h("a", { class: "knopf", href: "#/einstellungen", "data-fokus": "einstellungen" }, "Einstellungen") }), homeHinweis(app), meldung(app), tischHinweis(app), h("div", { class: "raster-2", role: "group", "aria-label": "Live spielen" }, h("button", { class: "knopf", "data-fokus": "live-spielen", onclick: () => liveSpielen(app, runden) }, "Live spielen"), h("button", { class: "knopf", "data-fokus": "einladung-oeffnen", onclick: () => app.zeigeBlatt(einladungBlatt(app)) }, "Einladung öffnen")), runden.length === 0
-        ? h("p", { class: "leer" }, "Lege zuerst eure Runde an, zum Beispiel „Donnerstagsrunde“. Danach kommen die Spieler.")
+    const echte = runden.filter((r) => r.id !== leseLokal("dulle.uebenRunde"));
+    return h("div", { class: "seite" }, filzkopf("Dulle", "Doppelkopf mitschreiben und live spielen", { motiv: true, aktionen: h("a", { class: "knopf", href: "#/einstellungen", "data-fokus": "einstellungen" }, "Einstellungen") }), homeHinweis(app), meldung(app), tischHinweis(app), h("div", { class: "raster-2", role: "group", "aria-label": "Spielen" }, h("button", { class: "knopf", "data-fokus": "live-spielen", onclick: () => liveSpielen(app, echte) }, "Live spielen"), h("button", {
+        class: "knopf", "data-fokus": "ueben",
+        onclick: async () => { const f = await ueben(app); if (f)
+            app.melde(f);
+        else
+            app.geheZu("/tisch"); },
+    }, "Gegen die KI üben"), h("button", { class: "knopf", style: "grid-column: 1 / -1", "data-fokus": "einladung-oeffnen", onclick: () => app.zeigeBlatt(einladungBlatt(app)) }, "Einladung öffnen")), runden.length === 0
+        ? h("p", { class: "leer" }, "Für eure Runde: zuerst unten anlegen, zum Beispiel „Donnerstagsrunde“. Üben geht auch ohne.")
         : h("nav", { class: "liste", "aria-label": "Runden" }, runden.map((r) => h("a", { href: `#/runde/${r.id}` }, h("span", { style: "flex-grow: 1; font-weight: 600" }, r.name), h("span", { class: "leise" }, `${Object.values(r.spieler).filter((s) => !s.ausgeblendet).length} Spieler`)))), ladenKnopf(app, "Runde aus Datei laden", "knopf text"), h("div", { class: "dehnen" }), h("a", { class: "knopf haupt", href: "#/runde-neu", "data-fokus": "runde-anlegen" }, "Runde anlegen"));
 }
 /** Live spielen: eine Runde → direkt zum Tisch eröffnen; mehrere → erst die Runde wählen; keine → erst anlegen. */
 function liveSpielen(app, runden) {
     if (runden.length === 0) {
-        app.melde("Lege zuerst eure Runde mit den Spielern an. Danach geht es mit „Live spielen“ an den Tisch.", "info");
+        app.melde("Lege zuerst eure Runde mit den Spielern an. Danach geht es direkt an den Tisch.", "info");
+        schreibeLokal(NACH_ANLEGEN, "live");
         app.geheZu("/runde-neu");
         return;
     }

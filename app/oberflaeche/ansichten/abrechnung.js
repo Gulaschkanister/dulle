@@ -82,6 +82,10 @@ export function abrechnung(app, teile) {
             : h("div", { class: "liste", "data-zahlungen": "" }, zahlungsListe.map((z) => h("div", {}, h("span", { style: "flex-grow: 1" }, `${name(z.von)} → ${name(z.an)}`), h("span", { class: "betrag" }, euro(z.cent))))))
         : null, h("section", { class: "gruppe", "aria-labelledby": "inzahlen-titel" }, h("h2", { id: "inzahlen-titel" }, "Der Abend in Zahlen"), h("div", { class: "kacheln" }, kachel("Spiele", String(zahl.spiele)), kachel("Soli gewonnen", `${zahl.soliGewonnen} von ${zahl.soliGespielt}`), zahl.teuerstes ? kachel(`Teuerstes Spiel (Nr. ${zahl.teuerstes.nr})`, `${zahl.teuerstes.wert} ${zahl.teuerstes.wert === 1 ? "Punkt" : "Punkte"}`) : null, zahl.reGewinnt ? kachel("Re gewinnt", `${zahl.reGewinnt.gewonnen} von ${zahl.reGewinnt.von}`) : null, praemienText ? kachel("Hochzeitsprämien", praemienText) : null), praemienText && cent > 0 ? h("p", { class: "leise", style: "margin: 0" }, "Prämien zählen im Endstand, aber nicht beim Geld.") : null), h("div", { class: "dehnen" }), s.abgeschlossen ? erinnerung(app, r) : null, h("button", { class: "knopf", "data-fokus": "teilen", onclick: () => void teilen() }, "Ergebnis teilen"), s.abgeschlossen
         ? h("a", { class: "knopf haupt", href: `#/runde/${r.id}`, "data-fokus": "zur-runde" }, "Zur Runde")
-        : h("button", { class: "knopf haupt", "data-fokus": "abschliessen", onclick: () => void abschliessen() }, "Abend abschließen"));
+        // Spec 016: Abschließen kann nur das Gerät, das den Abend schreibt (sonst über den Spielblock übernehmen).
+        : s.schreibendesGeraet === app.geraet
+            ? h("button", { class: "knopf haupt", "data-fokus": "abschliessen", onclick: () => void abschliessen() }, "Abend abschließen")
+            : [h("p", { class: "leise", style: "margin: 0" }, "Abschließen kann das Gerät, das den Abend schreibt."),
+                h("a", { class: "knopf", href: `#/abend/${s.id}`, "data-fokus": "zum-spielblock" }, "Zum Spielblock")]);
 }
 //# sourceMappingURL=abrechnung.js.map

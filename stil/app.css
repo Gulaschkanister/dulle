@@ -55,6 +55,7 @@ button, .knopf { font: inherit; color: inherit; }
   text-decoration: none;
 }
 .knopf.haupt { background: var(--accent); color: var(--on-accent); border-color: var(--accent); min-height: var(--tipp-haupt); width: 100%; font-size: 17px; }
+.knopf:not(.haupt):disabled { opacity: .55; cursor: default; }
 .knopf.haupt:disabled { background: var(--ink-muted); border-color: var(--ink-muted); color: var(--surface); cursor: default; }
 .knopf.text { border: 0; background: transparent; padding: 0 var(--s1); text-decoration: underline; text-underline-offset: 3px; }
 .knopf.gefahr { color: var(--danger); }
@@ -404,6 +405,9 @@ progress.laedt { width: 100%; height: 6px; accent-color: var(--accent); }
   padding: 16px 18px; border-radius: 12px; background: var(--paper); color: var(--ink); display: flex; flex-direction: column; gap: 10px; z-index: 3;
   box-shadow: 0 12px 30px rgba(0, 0, 0, .35); }
 .tisch-panel.klein { top: 30%; }
+/* Spec 016: Spielende mit „Spiel eintragen“ darf quer fast die ganze Höhe nehmen (667 × 375). */
+.tisch-panel.weiter-echt { box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .5); }
+.tisch-panel.ende { top: 50%; max-height: 92vh; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .5); }
 /* Spec 012: Rückkehr mit QR neben dem Text, damit es quer auf 375 px Höhe passt. */
 .tisch-panel.breit { width: min(600px, 94vw); max-height: 88vh; top: 50%; gap: 8px; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .5); }
 /* Entscheidung: Die Gegner links und rechts (mit Zähler) bleiben lesbar. */

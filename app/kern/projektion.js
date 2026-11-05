@@ -140,6 +140,10 @@ function projiziereSitzung(sitzungId, ereignisse, aufloesen, runde) {
             case "sitzungUebernommen":
                 sitzung.schreibendesGeraet = b.geraet;
                 break;
+            // Spec 016: Nach einem Gastgeber-Wechsel schreibt das neue Gerät den Abend weiter.
+            case "gastgeberGewechselt":
+                sitzung.schreibendesGeraet = b.daten.nach;
+                break;
             case "sitzungAbgeschlossen": {
                 sitzung.abgeschlossen = true;
                 const cent = b.daten.punktwertCent;

@@ -108,6 +108,13 @@ export class Mitspieler {
     trennen() { this.kanal.schliessen(); }
     waehle(spielerId) { this.senden({ t: "platz", spielerId }); }
     neuAmTisch(name) { this.senden({ t: "platz", neuerName: name }); }
+    /** Spec 016: Ein Spiel von Hand eintragen (zwischen zwei Spielen). Der Gastgeber rechnet die Punkte. */
+    eintragBeginnt() { this.meldung = null; this.senden({ t: "eintragBeginnt" }); }
+    eintragAbbrechen() { this.senden({ t: "eintragAbgebrochen" }); }
+    eintragen(eingabe, korrigiere) {
+        this.meldung = null;
+        this.senden({ t: "eintragen", eingabe, ...(korrigiere !== undefined ? { korrigiere } : {}) });
+    }
     /** Eine Ablehnung bleibt sichtbar, bis man das Nächste tut. */
     aktion(a) { this.hinweis = null; this.meldung = null; this.senden({ t: "aktion", aktion: a }); }
     senden(n) {

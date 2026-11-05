@@ -64,10 +64,11 @@ export class App {
         }
         return undefined;
     }
-    offeneSitzung(rundeId) {
+    /** Offener Abend; mit nurHier nur einer, den dieses Gerät schreibt (Spec 016: genau ein Gerät schreibt). */
+    offeneSitzung(rundeId, nurHier = false) {
         const kandidaten = Object.values(this.sicht)
             .filter((r) => rundeId === undefined || r.id === rundeId)
-            .flatMap((runde) => Object.values(runde.sitzungen).filter((s) => !s.abgeschlossen && !s.verworfen).map((sitzung) => ({ runde, sitzung })));
+            .flatMap((runde) => Object.values(runde.sitzungen).filter((s) => !s.abgeschlossen && !s.verworfen && (!nurHier || s.schreibendesGeraet === this.geraet)).map((sitzung) => ({ runde, sitzung })));
         return kandidaten.sort((a, b) => (a.sitzung.id < b.sitzung.id ? 1 : -1))[0];
     }
     /**

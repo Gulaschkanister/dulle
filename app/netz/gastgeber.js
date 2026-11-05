@@ -10,6 +10,8 @@ import { speicherKanalPaar } from "./kanal.js";
 import { KiSpieler } from "./kiSpieler.js";
 import { neuerRaum } from "./raum.js";
 import { pruefeForm } from "../kern/form.js";
+import { istEintrag, spielAusEintrag } from "../kern/eintrag.js";
+import { platzSchluessel } from "../kern/typen.js";
 export const PLAETZE = [1, 2, 3, 4];
 /** Spec 012: So lange muss ein Platz weg sein, bevor alle gefragt werden (Konzept). */
 export const FRAGE_NACH_MS = 60_000;
@@ -53,6 +55,10 @@ export class Gastgeber {
     raumKanaele = new WeakSet();
     /** Nach einer geplanten Übergabe gilt dieses Gerät nicht mehr als Gastgeber: keine Ereignisse, keine Antworten. */
     abgegeben = false;
+    /** Spec 016: Wer gerade ein Spiel von Hand einträgt. Solange wird nicht ausgeteilt. */
+    eintragVon = null;
+    /** Zuletzt verschickt: ob Eintragen geht. Ändert es sich (Spiel beginnt oder endet), bekommen alle die Tisch-Info. */
+    eintragenGemeldet = null;
     /** Für die Oberfläche des Gastgebers: wird nach jeder Änderung aufgerufen. */
     beiAenderung = null;
     /**
@@ -103,15 +109,13 @@ export class Gastgeber {
         this.bestaetigt.delete(platz);
         ki.beende();
     }
-    /** Zu dritt: einen freien Platz vor dem Start mit KI besetzen (höchstens einen). */
+    /** Einen freien Platz vor dem Start mit KI besetzen (bis zu drei, Spec 016; mindestens ein Mensch sitzt: der Gastgeber). */
     setzeKi(platz) {
         const sitz = this.z.plaetze[platz - 1];
         if (this.z.sitzungId)
             return "Die KI setzt sich nur vor dem ersten Spiel dazu.";
         if (sitz.spielerId !== null)
             return "Dieser Platz ist schon vergeben.";
-        if (this.z.plaetze.some((s) => s.ki === "platz"))
-            return "Es spielt schon eine KI mit.";
         this.kanaele.get(platz)?.schliessen();
         this.kanaele.delete(platz);
         sitz.spielerId = `ki-${platz}`;
@@ -255,6 +259,8 @@ export class Gastgeber {
         if (s === "offen")
             this.wackelt.delete(platz);
         if (s === "zu") {
+            if (this.eintragVon === platz)
+                this.eintragVon = null;
             const warBestaetigt = this.bestaetigt.has(platz);
             this.kanaele.delete(platz);
             this.bestaetigt.delete(platz);
@@ -306,7 +312,69 @@ export class Gastgeber {
             raum: sitzt ? this.z.raum ?? null : null,
             version: this.o.version ?? null,
             ich: sitzt ? fuer : null,
+            eintragVon: this.eintragVon,
+            eintragenMoeglich: this.eintragenMoeglich(),
+            schreiberWeiter: this.z.schreiberWeiter ?? false,
         };
+    }
+    // ---------- Spec 016: Spiele von Hand eintragen ----------
+    /** Zwischen zwei Spielen, nur mit vier Menschen am Tisch (mit echten Karten spielen nur Menschen). */
+    eintragenMoeglich() {
+        const s = this.z.spiel;
+        return !!this.z.sitzungId && !!this.sitzung() && !this.z.beendet && !this.z.schreiberWeiter
+            && (!s || s.phase === "ende") && this.z.plaetze.every((p) => !p.ki);
+    }
+    /** Spec 016: Der Gastgeber wartet nicht länger auf einen Eintrag (z. B. wenn jemand die Seite verlassen hat). */
+    eintragFreigeben() {
+        if (this.eintragVon === null)
+            return;
+        this.eintragVon = null;
+        this.anAlleTisch();
+    }
+    /** Der Gastgeber schreibt mit echten Karten weiter: kein Austeilen mehr, die anderen sehen den Hinweis. */
+    async mitEchtenKartenWeiter() {
+        if (!this.eintragenMoeglich())
+            return "Das geht nur zwischen zwei Spielen und nur ohne KI am Tisch.";
+        this.z.schreiberWeiter = true;
+        this.eintragVon = null;
+        await this.merke();
+        this.anAlleTisch();
+        return null;
+    }
+    async trageEin(platz, n) {
+        // Jede Ablehnung gibt den Tisch frei: Sonst teilte der Gastgeber nie wieder aus (Prüfer 016).
+        const nein = (grund) => {
+            if (this.eintragVon === platz) {
+                this.eintragVon = null;
+                this.anAlleTisch();
+            }
+            this.sende(platz, { t: "abgelehnt", grund });
+        };
+        if (!this.eintragenMoeglich())
+            return nein("Eintragen geht nach diesem Spiel.");
+        if (this.eintragVon !== null && this.eintragVon !== platz)
+            return nein("Gerade trägt jemand anderes ein Spiel ein.");
+        const sitzung = this.sitzung();
+        if (!istEintrag(n.eingabe))
+            return nein("Diese Eingabe kann der Tisch nicht lesen.");
+        const original = n.korrigiere !== undefined ? sitzung.spiele.find((sp) => sp.nr === n.korrigiere) : undefined;
+        if (n.korrigiere !== undefined && (!original || original.daten.eingabe === "direkt"))
+            return nein("Dieses Spiel lässt sich hier nicht korrigieren.");
+        // Nummer, Vorhand, Plätze und Profil kommen vom Gastgeber, die Punkte rechnet er selbst (Skill netz-sicherheit).
+        const e = spielAusEintrag(n.eingabe, {
+            nr: original?.nr ?? sitzung.naechsteNr, vorhand: original?.daten.vorhand ?? sitzung.naechsteVorhand,
+            amTisch: original ? Object.keys(original.daten.punkte) : sitzung.plaetze.map(platzSchluessel), profil: sitzung.profil,
+        });
+        if (!e.ok)
+            return nein(e.fehlt);
+        if (!await this.erzeuge(original ? "spielKorrigiert" : "spielEingetragen", e.daten, this.z.sitzungId))
+            return nein("Das Spiel konnte nicht gespeichert werden.");
+        this.eintragVon = null;
+        await this.merke();
+        for (const p of PLAETZE)
+            this.sendeRunde(p);
+        this.sende(platz, { t: "hinweis", text: `Spiel ${e.daten.nr} ${original ? "korrigiert" : "eingetragen"}.` });
+        this.anAlleTisch();
     }
     // ---------- Ablauf ----------
     /** Startet den Abend, sobald vier sitzen: `sitzungBegonnen` (modus direkt) und das erste Spiel. */
@@ -338,7 +406,7 @@ export class Gastgeber {
     }
     /** Nächstes Spiel (nur der Gastgeber). Vorhand und Nummer kommen aus der Projektion. */
     async naechstesSpiel() {
-        if (!this.z.sitzungId || this.z.beendet || (this.z.spiel && this.z.spiel.phase !== "ende"))
+        if (!this.z.sitzungId || this.z.beendet || this.z.schreiberWeiter || this.eintragVon !== null || (this.z.spiel && this.z.spiel.phase !== "ende"))
             return;
         await this.teileAus();
     }
@@ -493,6 +561,23 @@ export class Gastgeber {
             return this.sendeSicht(platz);
         if (!this.bestaetigt.has(platz))
             return this.sende(platz, { t: "abgelehnt", grund: "Du sitzt noch nicht am Tisch." });
+        if (n.t === "eintragBeginnt") {
+            if (!this.eintragenMoeglich())
+                return this.sende(platz, { t: "abgelehnt", grund: "Eintragen geht nach diesem Spiel." });
+            if (this.eintragVon !== null && this.eintragVon !== platz)
+                return this.sende(platz, { t: "abgelehnt", grund: "Gerade trägt jemand anderes ein Spiel ein." });
+            this.eintragVon = platz;
+            return this.anAlleTisch();
+        }
+        if (n.t === "eintragAbgebrochen") {
+            if (this.eintragVon === platz) {
+                this.eintragVon = null;
+                this.anAlleTisch();
+            }
+            return;
+        }
+        if (n.t === "eintragen")
+            return this.trageEin(platz, n);
         // Abgleich erst, wenn der Platz bestätigt ist (Spec 030).
         if (n.t === "ergaenzung")
             return this.ergaenze(platz, n.ereignisse);
@@ -691,6 +776,8 @@ export class Gastgeber {
         await this.merke();
         for (const p of PLAETZE)
             this.sendeSicht(p);
+        if (this.eintragenMoeglich() !== this.eintragenGemeldet)
+            this.anAlleTisch();
         // Nach Spielende (netz-sicherheit, Regel 8) bekommen alle die vollständigen Ereignisse der Runde.
         if (this.z.spiel?.phase === "ende")
             for (const p of PLAETZE)
@@ -792,6 +879,7 @@ export class Gastgeber {
                 this.sende(p, n);
     }
     anAlleTisch() {
+        this.eintragenGemeldet = this.eintragenMoeglich();
         for (const p of PLAETZE)
             this.sende(p, { t: "tisch", tisch: this.tischInfo(p) });
         // Wer auf Bestätigung wartet, sieht den Tisch ebenfalls (ohne Platz und ohne Karten).

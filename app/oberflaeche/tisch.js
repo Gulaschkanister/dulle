@@ -1,5 +1,6 @@
 // Der laufende Tisch auf diesem Gerät (Spec 010, 012, 030): Gastgeber oder Mitspieler, Einladungen per QR oder Link,
 // Rückkehr (QR oder still über den Raum), Übernahme, Verbindung zum Speicher. Verbindungsabbrüche sind ein normaler Zustand (netz-sicherheit, Wiederverbinden).
+import { neueUlid } from "../kern/ulid.js";
 import { FRAGE_NACH_MS, Gastgeber } from "../netz/gastgeber.js";
 import { Mitspieler } from "../netz/mitspieler.js";
 import { gastgeberImRaum, mitspielerImRaum, raumPfad } from "../netz/raum.js";
@@ -8,6 +9,7 @@ import { guteKi } from "./kiRechner.js";
 import { beantworteEinladung, erstelleEinladung } from "../netz/webrtc.js";
 import { codeAusText } from "../netz/sdp.js";
 import { leseLokal, schreibeLokal } from "./app.js";
+import { zuletztGenutzt } from "./regeln.js";
 const GESPEICHERT = "tisch";
 /** Nur für Tests (E2E): feste Seeds in dieser Reihenfolge, damit Hochzeit, Armut usw. sicher vorkommen. */
 const TEST_SEEDS = "dulle.test.seeds";
@@ -24,6 +26,10 @@ export const TURN = "dulle.turn";
 const RAUM_WARTEN_MS = 20_000;
 /** Abstand zwischen zwei stillen Rückkehr-Versuchen über den Raum. */
 const RUECKKEHR_ABSTAND_MS = 15_000;
+/** So lange gilt ein Getrennter als „kommt über das Internet zurück“, bevor „Verbindung weg“ und „zurückholen“ kommen. */
+export const RAUM_GEDULD_MS = 20_000;
+/** Plätze, deren 20 s auf der Platzliste schon abgelaufen und neu gezeichnet sind (Schlüssel: Platz und wegSeit). */
+const geduldVorbei = new Set();
 const KLAPPT_NICHT = "Der Tisch antwortet nicht. Ist die App beim Gastgeber offen? Dann „Noch einmal versuchen“. Sitzt ihr zusammen, kann der Gastgeber auch „Am Tisch (QR)“ wählen.";
 let aktiv = null;
 let offenerTisch = null;
@@ -82,17 +88,28 @@ function starteUhr(app) {
         void t.gastgeber?.tick();
         if (t.rolle === "gastgeber" && !gastgeberRaum)
             void raumOeffnen(app);
-        if (t.rolle === "mitspieler" && t.client && !t.client.verbunden)
+        if (t.rolle === "mitspieler" && t.client && !t.client.verbunden && !t.client.tisch?.schreiberWeiter)
             void zurueckUeberRaum(app);
         const ti = t.client?.tisch;
         const zaehlt = ti && (ti.plaetze.some((p) => p.zustand === "weg") || ti.wahl !== null) || (t.client && !t.client.verbunden);
-        if (zaehlt && (location.hash.startsWith("#/tisch") || /^#\/runde\/[^/]+\/am-handy/.test(location.hash)))
+        if (zaehlt && location.hash.startsWith("#/tisch"))
             app.zeichne();
+        // Die Platzliste nicht jede Sekunde neu zeichnen (dabei können Tipps verloren gehen), sondern nur, wenn für einen
+        // Platz die 20 s ablaufen: Dann kommt „zurückholen“ (Spec 030, Prüfer und UI 2026-10-31).
+        else if (/^#\/runde\/[^/]+\/am-handy/.test(location.hash) && ti) {
+            const neu = ti.plaetze.filter((p) => p.zustand === "weg" && p.wegSeit !== null && Date.now() - p.wegSeit >= RAUM_GEDULD_MS && !geduldVorbei.has(`${p.platz}:${p.wegSeit}`));
+            for (const p of neu)
+                geduldVorbei.add(`${p.platz}:${p.wegSeit}`);
+            if (neu.length > 0)
+                app.zeichne();
+        }
     }, 1000);
 }
 // ---------- Gastgeber ----------
 /** Tisch eröffnen, nach Neuladen fortsetzen oder (Spec 012) von einem anderen Gerät übernehmen. */
-export async function eroeffne(app, rundeId, profil, eigenerSpielerId, eigenerPlatz = 1, zustand, uebernahme) {
+export async function eroeffne(app, rundeId, profil, eigenerSpielerId, eigenerPlatz = 1, zustand, uebernahme, ohneRaum = false) {
+    // Ein vorgemerktes Spiel (Schreiber, „Rückgängig“) gehört schon zum Abend: erst speichern, dann den Tisch aufbauen.
+    await app.festschreiben();
     const ereignisse = (await app.speicher.alle()).filter((e) => e.runde === rundeId);
     const seed = testSeeds();
     const v = await ladeVersion();
@@ -100,7 +117,7 @@ export async function eroeffne(app, rundeId, profil, eigenerSpielerId, eigenerPl
         rundeId, profil, geraet: app.geraet, ereignisse, ...(v ? { version: v } : {}), kiRechner: guteKi,
         speichere: async (neu) => {
             await app.speicher.fuegeHinzu(neu);
-            if (neu.some((e) => ["sitzungBegonnen", "spielBeendet", "spielerAngelegt", "spielNeuGegeben", "plaetzeGeaendert"].includes(e.typ)))
+            if (neu.some((e) => ["sitzungBegonnen", "spielBeendet", "spielEingetragen", "spielKorrigiert", "spielerAngelegt", "spielNeuGegeben", "plaetzeGeaendert"].includes(e.typ)))
                 await app.ladeNeu();
         },
         merke: async (z) => {
@@ -130,7 +147,89 @@ export async function eroeffne(app, rundeId, profil, eigenerSpielerId, eigenerPl
         await app.speicher.setzeEinstellung(GESPEICHERT, offenerTisch);
     }
     starteUhr(app);
-    void raumOeffnen(app);
+    if (!ohneRaum)
+        void raumOeffnen(app);
+}
+/** Spec 016: Den Tisch für einen offenen Abend eröffnen. Die vier Plätze stehen schon; Nummer und Vorhand laufen weiter. */
+export async function eroeffneFuerAbend(app, sitzungId, eigenerSpielerId) {
+    const gefunden = app.sitzung(sitzungId);
+    if (!gefunden)
+        return "Den Abend gibt es auf diesem Gerät nicht.";
+    const { runde: r, sitzung: s } = gefunden;
+    const eigen = s.plaetze.find((p) => p.art === "mensch" && p.spielerId === eigenerSpielerId);
+    if (!eigen)
+        return "Du sitzt an diesem Abend nicht am Tisch.";
+    const token = [...crypto.getRandomValues(new Uint8Array(16))].map((x) => x.toString(16).padStart(2, "0")).join("");
+    const zustand = {
+        tischId: neueUlid(), eigenerPlatz: eigen.platz, sitzungId: s.id, spiel: null,
+        plaetze: s.plaetze.map((p) => p.art === "mensch"
+            ? { platz: p.platz, spielerId: p.spielerId, token: p.platz === eigen.platz ? token : null }
+            : { platz: p.platz, spielerId: `ki-${p.platz}`, token: null, ki: "platz" }),
+    };
+    const nurKi = s.plaetze.every((p) => p.platz === eigen.platz || p.art === "ki");
+    await eroeffne(app, r.id, s.profil, eigenerSpielerId, eigen.platz, zustand, undefined, nurKi);
+    offenerTisch = { rundeId: r.id, profil: s.profil, eigenerSpielerId, zustand: structuredClone(aktiv.gastgeber.zustand) };
+    await app.speicher.setzeEinstellung(GESPEICHERT, offenerTisch);
+    return null;
+}
+/** Spec 016: Die Runde „Üben“ mit dem Spieler „Ich“; einmal angelegt, dann wiederverwendet. */
+const UEBEN = "dulle.uebenRunde";
+/**
+ * Spec 016: Gegen die KI üben. Ein Tipp: Runde „Üben“ (beim ersten Mal anlegen), drei KI-Plätze, austeilen. Kein Netz.
+ * Läuft schon ein Übungstisch oder ist ein Übungsabend offen, geht es dort weiter.
+ */
+export async function ueben(app) {
+    let rundeId = leseLokal(UEBEN);
+    if (!rundeId || !app.runde(rundeId)) {
+        rundeId = app.neueId();
+        if (!(await app.speichere("rundeAngelegt", { name: "Üben" }, { runde: rundeId })))
+            return "Die Übungsrunde konnte nicht angelegt werden.";
+        if (!(await app.speichere("spielerAngelegt", { spielerId: app.neueId(), name: "Ich" }, { runde: rundeId })))
+            return "Die Übungsrunde konnte nicht angelegt werden.";
+        schreibeLokal(UEBEN, rundeId);
+    }
+    const r = app.runde(rundeId);
+    const ich = Object.values(r.spieler).find((sp) => !sp.zusammengefuehrtIn);
+    if (aktiv) {
+        if (aktiv.rundeId === rundeId && aktiv.rolle === "gastgeber")
+            return null;
+        return "Erst den laufenden Tisch beenden (Menü am Tisch).";
+    }
+    if (offenerTisch?.rundeId === rundeId) {
+        await fortsetzen(app);
+        return null;
+    }
+    const offen = app.offeneSitzung(rundeId, true);
+    if (offen) {
+        const f = await eroeffneFuerAbend(app, offen.sitzung.id, ich.id);
+        if (f)
+            return f;
+        await aktiv.gastgeber.naechstesSpiel();
+        return null;
+    }
+    await eroeffne(app, rundeId, zuletztGenutzt(r), ich.id, 1, undefined, undefined, true);
+    const g = aktiv.gastgeber;
+    for (const p of [2, 3, 4]) {
+        const f = g.setzeKi(p);
+        if (f)
+            return f;
+    }
+    return g.starte();
+}
+/** Spec 016: Der Gastgeber schreibt mit echten Karten weiter. Der Tisch geht zu, der Abend bleibt offen auf diesem Gerät. */
+export async function mitEchtenKartenWeiter(app) {
+    const g = aktiv?.gastgeber;
+    const sitzungId = g?.sitzungId;
+    if (!g || !sitzungId)
+        return "Es läuft kein Tisch.";
+    const f = await g.mitEchtenKartenWeiter();
+    if (f)
+        return f;
+    // Die anderen haben den Hinweis bekommen; danach gehen die Verbindungen zu.
+    setTimeout(() => g.schliesseAlle(), 1500);
+    await schliesseTisch(app);
+    app.geheZu(`/abend/${sitzungId}`);
+    return null;
 }
 /**
  * Spec 030: Raum des Tischs öffnen, sobald Internet da ist, auch am QR-Tisch (Rückkehr ohne Tipp). Ohne Internet oder
@@ -138,7 +237,8 @@ export async function eroeffne(app, rundeId, profil, eigenerSpielerId, eigenerPl
  */
 async function raumOeffnen(app) {
     const g = aktiv?.gastgeber;
-    if (!g || gastgeberRaum || !navigator.onLine || leseLokal(TEST_OHNE_RAUM) || Date.now() - letztesRaumOeffnen < RUECKKEHR_ABSTAND_MS)
+    const nurKi = g?.zustand.plaetze.every((p) => p.platz === g.zustand.eigenerPlatz || p.ki === "platz") ?? false;
+    if (!g || nurKi || gastgeberRaum || !navigator.onLine || leseLokal(TEST_OHNE_RAUM) || Date.now() - letztesRaumOeffnen < RUECKKEHR_ABSTAND_MS)
         return;
     letztesRaumOeffnen = Date.now();
     const raum = g.raum;

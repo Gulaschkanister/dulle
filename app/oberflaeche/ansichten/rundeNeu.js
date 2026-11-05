@@ -1,5 +1,7 @@
 // Neue Runde: Name und Spieler in einem Schritt (Spec 006, Mockup „Neu: Runde und Spieler in einem Schritt“).
 // Tipp-Budget: Rundenname + je Spieler Name + Enter + ein Tipp auf die Hauptaktion.
+import { leseLokal, schreibeLokal } from "../app.js";
+import { NACH_ANLEGEN } from "./start.js";
 import { filzkopf, meldung } from "../bausteine.js";
 import { h } from "../dom.js";
 let entwurf = { name: "", spieler: [], eingabe: "" };
@@ -28,7 +30,10 @@ export function rundeNeu(app) {
                 return;
         }
         entwurf = { name: "", spieler: [], eingabe: "" };
-        app.geheZu(spieler.length >= 4 ? `/runde/${rundeId}/abend-beginnen` : `/runde/${rundeId}`);
+        // Spec 016: Kam man über „Live spielen“, geht es an den Tisch; die Absicht geht nicht verloren.
+        const live = leseLokal(NACH_ANLEGEN) === "live";
+        schreibeLokal(NACH_ANLEGEN, null);
+        app.geheZu(live ? `/runde/${rundeId}/am-handy` : spieler.length < 4 ? `/runde/${rundeId}` : `/runde/${rundeId}/abend-beginnen`);
     };
     return h("div", { class: "seite" }, filzkopf("Neue Runde", "Name und Spieler in einem Schritt", { rechts: h("a", { class: "knopf", href: "#/" }, "Abbrechen") }), meldung(app), h("div", { class: "gruppe" }, h("label", { for: "rundenname" }, "Name der Runde"), h("input", {
         type: "text", id: "rundenname", maxlength: 40, placeholder: "Donnerstagsrunde", autocomplete: "off", enterkeyhint: "next",
@@ -41,7 +46,7 @@ export function rundeNeu(app) {
                 document.getElementById("neuer-spieler")?.focus();
             }
         },
-    })), h("div", { class: "gruppe" }, h("div", { class: "zeile" }, h("label", { for: "neuer-spieler", style: "flex-grow: 1" }, "Spieler"), h("span", { class: "leise", style: `color: var(${anzahl >= 4 ? "--accent" : "--warning"})` }, anzahl >= 4 ? `${anzahl} Spieler` : `noch ${4 - anzahl} bis zum ersten Abend`)), anzahl > 0
+    })), h("div", { class: "gruppe" }, h("div", { class: "zeile" }, h("label", { for: "neuer-spieler", style: "flex-grow: 1" }, "Spieler"), h("span", { class: "leise", style: `color: var(${anzahl >= 4 ? "--accent" : "--warning"})` }, anzahl >= 4 ? `${anzahl} Spieler` : leseLokal(NACH_ANLEGEN) === "live" ? (anzahl === 0 ? "Trag mindestens dich selbst ein" : "Fehlende Plätze kann die KI übernehmen") : `noch ${4 - anzahl} bis zum ersten Abend`)), anzahl > 0
         ? h("div", { class: "chips", "aria-label": "Spieler der neuen Runde" }, entwurf.spieler.map((name, i) => h("span", { class: `chip${name === entwurf.zuletzt && i === anzahl - 1 ? " neu-dazu" : ""}` }, name, h("button", {
             class: "weg", type: "button", "aria-label": `${name} entfernen`,
             onclick: () => aendern({ spieler: entwurf.spieler.filter((_, j) => j !== i), zuletzt: "" }),

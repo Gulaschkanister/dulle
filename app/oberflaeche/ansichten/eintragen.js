@@ -1,12 +1,21 @@
 // Spiel eintragen (Mockup „Schreiber · Spiel eintragen“): Modus „Nur Punkte“ (Spec 001) und Rechner (Spec 002).
 // Tipp-Budget Nur Punkte: zwei Gewinner + „Spiel eintragen“. Rechner: zwei Re-Spieler + Augen + „Spiel eintragen“.
 import { ansagenErlaubt, armutErlaubt, bockErlaubt, hochzeitPraemie, soloFaktor, sonderpunkteErlaubt } from "../../kern/profile.js";
-import { spielAusSchnell } from "../../kern/schnell.js";
+import { spielAusEintrag } from "../../kern/eintrag.js";
 import { platzSchluessel } from "../../kern/typen.js";
-import { aufschluesselung, spielAusRechner } from "../../kern/wertung.js";
+import { aufschluesselung } from "../../kern/wertung.js";
 import { leseLokal, schreibeLokal } from "../app.js";
 import { filzkopf, kopf, kurzNamen, meldung, spielerName } from "../bausteine.js";
 import { h, punkteText } from "../dom.js";
+import { tisch } from "../tisch.js";
+/** Spec 016: Am Live-Tisch einmal je Eintrag beim Gastgeber anmelden (er teilt dann nicht aus). */
+let angemeldet = null;
+addEventListener("hashchange", () => {
+    if (angemeldet === null || location.hash.includes("/eintragen"))
+        return;
+    angemeldet = null;
+    tisch()?.client?.eintragAbbrechen();
+});
 const schluessel = (sitzungId, nr) => `dulle.entwurf.${sitzungId}.${nr}`;
 const MODUS = (rundeId) => `dulle.modus.${rundeId}`;
 const STUFEN = ["ansage", "k90", "k60", "k30", "schwarz"];
@@ -72,10 +81,21 @@ export function eintragen(app, teile) {
     const { runde: r, sitzung: s } = gefunden;
     const korrigiereNr = teile[3] ? Number(teile[3]) : undefined;
     const original = korrigiereNr ? s.spiele.find((sp) => sp.nr === korrigiereNr) : undefined;
-    if (s.abgeschlossen || (korrigiereNr && !original)) {
+    // Spec 016: Läuft für diesen Abend ein Tisch, geht der Eintrag an das Gastgeber-Gerät. Sonst schreibt nur das Gerät des Abends.
+    const c = tisch()?.client;
+    const ti = c?.tisch;
+    const live = !!c && !!ti && ti.sitzungId === s.id && c.verbunden && !ti.schreiberWeiter;
+    if (s.abgeschlossen || (korrigiereNr && !original) || (!live && s.schreibendesGeraet !== app.geraet) || (live && original?.daten.eingabe === "direkt")) {
         queueMicrotask(() => app.geheZu(`/abend/${s.id}`));
         return h("div", { class: "seite" });
     }
+    const anmeldung = `${s.id}/${korrigiereNr ?? "neu"}`;
+    if (live && ti.eintragVon !== ti.ich && angemeldet !== anmeldung) {
+        angemeldet = anmeldung;
+        c.eintragBeginnt();
+    }
+    const ichTrageEin = !live || ti.eintragVon === ti.ich;
+    const zurueck = live ? "#/tisch" : `#/abend/${s.id}`;
     const key = schluessel(s.id, korrigiereNr ?? "neu");
     let entwurf = { ...startEntwurf(r, s, korrigiereNr), ...(leseLokal(key) ?? {}) };
     const aendern = (teil) => {
@@ -93,21 +113,25 @@ export function eintragen(app, teile) {
     const praemie = hochzeitPraemie(profil);
     // ---------- Ergebnis berechnen ----------
     let daten = null;
+    // Spec 016: Dieselbe Eingabe rechnet hier und, am Live-Tisch, auf dem Gastgeber-Gerät.
+    let eingabe = null;
+    const ort = { nr, vorhand, amTisch, profil };
     let fehlt = "";
     let titel = "";
     let aufschluss = "";
     if (entwurf.modus === "schnell") {
         const hochzeit = entwurf.spielart === "hochzeit" && praemie !== null;
         const solo = entwurf.spielart === "solo" || (hochzeit && entwurf.ohnePartner === true);
-        const e = spielAusSchnell({
-            nr, vorhand, amTisch, spielart: hochzeit ? "hochzeit" : entwurf.spielart === "hochzeit" ? "normal" : entwurf.spielart, gewinner: entwurf.gewinner,
-            ...(hochzeit && entwurf.hochzeiter ? { hochzeiter: entwurf.hochzeiter, praemie } : {}),
+        eingabe = {
+            art: "schnell", spielart: hochzeit ? "hochzeit" : entwurf.spielart === "hochzeit" ? "normal" : entwurf.spielart, gewinner: entwurf.gewinner,
+            ...(hochzeit && entwurf.hochzeiter ? { hochzeiter: entwurf.hochzeiter } : {}),
             ...(hochzeit && entwurf.ohnePartner ? { ohnePartner: true } : {}),
             ...(entwurf.solist ? { solist: entwurf.solist } : {}),
             ...(entwurf.soloGewonnen !== undefined ? { soloGewonnen: entwurf.soloGewonnen } : {}),
             ...(entwurf.partei ? { gewinnerPartei: entwurf.partei } : {}),
-            wert: entwurf.wert, bock, soloFaktor: soloFaktor(profil),
-        });
+            wert: entwurf.wert, bock,
+        };
+        const e = spielAusEintrag(eingabe, ort);
         if (e.ok) {
             daten = e.daten;
             titel = solo ? `${hochzeit ? "Hochzeit allein" : "Solo"} ${entwurf.soloGewonnen ? "gewonnen" : "verloren"}` : `${entwurf.gewinner.map((g) => spielerName(r, g)).join(" und ")} gewinnen`;
@@ -122,13 +146,14 @@ export function eintragen(app, teile) {
         if (entwurf.rAugen === null)
             fehlt = entwurf.rRe.length === 0 ? (entwurf.rArt === "solo" ? "Wähle, wer Solo gespielt hat." : "Wähle die Re-Spieler.") : "Augen eingeben.";
         else {
-            const e = spielAusRechner({
-                nr, vorhand, amTisch, spielart, re: entwurf.rRe, augenRe: entwurf.rAugen,
-                ansagen: ansagenErlaubt(profil) ? entwurf.rAnsagen : [], sonderpunkte: entwurf.rSp, bock,
+            eingabe = {
+                art: "rechner", spielart, re: entwurf.rRe, augenRe: entwurf.rAugen,
+                ansagen: entwurf.rAnsagen, sonderpunkte: entwurf.rSp, bock,
                 ...(entwurf.rArt === "solo" && entwurf.rSoloart !== "still" ? { soloart: entwurf.rSoloart } : {}),
                 ...(entwurf.rArt === "armut" ? { vorbehalt: "armut" } : {}),
-            }, profil);
-            if (e.ok) {
+            };
+            const e = spielAusEintrag(eingabe, ort);
+            if (e.ok && e.wertung) {
                 daten = e.daten;
                 const einzel = e.daten.re?.length === 1;
                 titel = e.wertung.gewinner === "keiner" ? "Niemand gewinnt"
@@ -136,7 +161,7 @@ export function eintragen(app, teile) {
                 aufschluss = aufschluesselung(e.wertung) + (einzel ? " · Solist zählt " + soloFaktor(profil) + "-fach" : "") + (bock > 1 ? ` · Bock ×${bock}` : "")
                     + (e.daten.praemie ? ` · ${praemieText(e.daten.praemie)}` : "");
             }
-            else
+            else if (!e.ok)
                 fehlt = e.fehlt;
         }
     }
@@ -146,6 +171,16 @@ export function eintragen(app, teile) {
     const speichern = async () => {
         if (!daten)
             return;
+        if (live) {
+            // Der Gastgeber prüft die Eingabe und rechnet die Punkte selbst.
+            if (!eingabe || !ichTrageEin)
+                return;
+            c.eintragen(eingabe, original?.nr);
+            angemeldet = null;
+            schreibeLokal(key, null);
+            app.geheZu("/tisch");
+            return;
+        }
         const ort = { runde: r.id, sitzung: s.id };
         if (original) {
             if (await app.speichere("spielKorrigiert", daten, ort)) {
@@ -169,8 +204,11 @@ export function eintragen(app, teile) {
     };
     const spielerKnopf = (id, gewaehlt, marke, klick) => h("button", { class: "wahl", "aria-pressed": String(gewaehlt), "data-fokus": `spieler-${id}`, onclick: klick }, h("span", { class: "kuerzen" }, spielerName(r, id)), gewaehlt ? h("span", { class: "marke" }, marke) : null);
     return h("div", { class: "seite", style: "gap: 16px" }, filzkopf(original ? `Spiel ${nr} korrigieren` : `Spiel ${nr}`, `${vorhandName} kam raus · ${profil.name}`, {
-        rechts: h("a", { class: "knopf", href: `#/abend/${s.id}`, onclick: () => schreibeLokal(key, null) }, "Abbrechen"),
-    }), meldung(app), h("div", { class: "segment", role: "group", "aria-label": "Eingabe" }, ["schnell", "rechner"].map((m) => h("button", {
+        rechts: h("a", { class: "knopf", href: zurueck, onclick: () => { schreibeLokal(key, null); if (live) {
+                angemeldet = null;
+                c.eintragAbbrechen();
+            } } }, "Abbrechen"),
+    }), meldung(app), live && c.meldung ? h("p", { class: "hinweis fehler", role: "alert" }, c.meldung) : null, live && !ichTrageEin && !c.meldung ? h("p", { class: "leise", role: "status" }, ti.eintragVon !== null ? "Gerade trägt jemand anderes ein Spiel ein." : "Einen Moment, der Tisch hält das Austeilen an …") : null, h("div", { class: "segment", role: "group", "aria-label": "Eingabe" }, ["schnell", "rechner"].map((m) => h("button", {
         "aria-pressed": String(entwurf.modus === m), "data-fokus": `modus-${m}`,
         onclick: () => { schreibeLokal(MODUS(r.id), m); aendern({ modus: m }); },
     }, m === "schnell" ? "Nur Punkte" : "Rechner"))), entwurf.modus === "schnell" ? schnellTeil() : rechnerTeil(), bockErlaubt(profil)
@@ -178,7 +216,7 @@ export function eintragen(app, teile) {
             class: "wahl", "aria-pressed": String(bock > 1), "data-fokus": "bock",
             onclick: () => aendern({ bock: bock === 1 ? 2 : bock === 2 ? 4 : 1 }),
         }, bock > 1 ? `Bock ×${bock}` : "kein Bock"))
-        : null, h("div", { class: "dehnen" }), h("section", { class: "karte", "aria-label": "Vorschau", "aria-live": "polite" }, h("div", { class: "zeile", style: "align-items: baseline" }, h("div", { style: "font: 600 20px/1.15 var(--family-display); flex-grow: 1" }, daten ? titel : fehlt), daten ? h("div", { style: "font: 600 24px/1 var(--family-display); white-space: nowrap" }, `${daten.wert} ${daten.wert === 1 ? "Punkt" : "Punkte"}`) : null), aufschluss && daten ? h("div", { class: "leise", "data-aufschluesselung": "" }, aufschluss) : null, h("div", { class: "verteilung" }, amTisch.map((id) => h("div", {}, h("span", { class: "name", title: spielerName(r, id) }, kurz[id]), h("span", { class: "wert", "data-vorschau": id }, daten ? punkteText((daten.punkte[id] ?? 0) + (daten.praemie?.[id] ?? 0), true) : "–"))))), h("button", { class: "knopf haupt", disabled: !daten, "data-fokus": "speichern", onclick: () => void speichern() }, original ? "Korrektur speichern" : "Spiel eintragen"));
+        : null, h("div", { class: "dehnen" }), h("section", { class: "karte", "aria-label": "Vorschau", "aria-live": "polite" }, h("div", { class: "zeile", style: "align-items: baseline" }, h("div", { style: "font: 600 20px/1.15 var(--family-display); flex-grow: 1" }, daten ? titel : fehlt), daten ? h("div", { style: "font: 600 24px/1 var(--family-display); white-space: nowrap" }, `${daten.wert} ${daten.wert === 1 ? "Punkt" : "Punkte"}`) : null), aufschluss && daten ? h("div", { class: "leise", "data-aufschluesselung": "" }, aufschluss) : null, h("div", { class: "verteilung" }, amTisch.map((id) => h("div", {}, h("span", { class: "name", title: spielerName(r, id) }, kurz[id]), h("span", { class: "wert", "data-vorschau": id }, daten ? punkteText((daten.punkte[id] ?? 0) + (daten.praemie?.[id] ?? 0), true) : "–"))))), h("button", { class: "knopf haupt", disabled: !daten || !ichTrageEin, "data-fokus": "speichern", onclick: () => void speichern() }, original ? "Korrektur speichern" : "Spiel eintragen"));
     // ---------- Modus „Nur Punkte“ (Spec 001) ----------
     function schnellTeil() {
         const hochzeit = entwurf.spielart === "hochzeit" && praemie !== null;
