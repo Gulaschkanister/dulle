@@ -1,7 +1,7 @@
 // Spiel eintragen (Mockup „Schreiber · Spiel eintragen“): Modus „Nur Punkte“ (Spec 001) und Rechner (Spec 002).
 // Tipp-Budget Nur Punkte: zwei Gewinner + „Spiel eintragen“. Rechner: zwei Re-Spieler + Augen + „Spiel eintragen“.
 import { ansagenErlaubt, armutErlaubt, bockErlaubt, hochzeitPraemie, soloFaktor, sonderpunkteErlaubt } from "../../kern/profile.js";
-import { spielAusEintrag } from "../../kern/eintrag.js";
+import { spielAusEintrag, entwurfErledigt } from "../../kern/eintrag.js";
 import { platzSchluessel } from "../../kern/typen.js";
 import { aufschluesselung } from "../../kern/wertung.js";
 import { leseLokal, schreibeLokal } from "../app.js";
@@ -10,10 +10,13 @@ import { h, punkteText } from "../dom.js";
 import { tisch } from "../tisch.js";
 /** Spec 016: Am Live-Tisch einmal je Eintrag beim Gastgeber anmelden (er teilt dann nicht aus). */
 let angemeldet = null;
+/** Der Gastgeber hatte diesem Eintrag den Tisch schon gegeben (danach heißt „nicht mehr dran“: freigegeben). */
+let zugeteilt = null;
 addEventListener("hashchange", () => {
     if (angemeldet === null || location.hash.includes("/eintragen"))
         return;
     angemeldet = null;
+    zugeteilt = null;
     tisch()?.client?.eintragAbbrechen();
 });
 const schluessel = (sitzungId, nr) => `dulle.entwurf.${sitzungId}.${nr}`;
@@ -25,7 +28,8 @@ function startEntwurf(r, s, korrigiereNr) {
     const letztes = [...s.spiele].reverse().find((sp) => !sp.verworfen);
     const e = {
         modus: leseLokal(MODUS(r.id)) ?? "schnell", bock: 1,
-        spielart: "normal", gewinner: [], wert: letztes?.daten.wert ?? 1,
+        // Vorschlag: Wert des letzten Spiels; 0 (Sonderpunkte heben sich auf) ist als Vorschlag nie sinnvoll.
+        spielart: "normal", gewinner: [], wert: letztes?.daten.wert || 1,
         rArt: "normal", rSoloart: "damen", rRe: [], rAugen: null, rAnsagen: [], rSp: {}, rExtras: false,
     };
     const o = korrigiereNr ? s.spiele.find((sp) => sp.nr === korrigiereNr)?.daten : undefined;
@@ -90,13 +94,24 @@ export function eintragen(app, teile) {
         return h("div", { class: "seite" });
     }
     const anmeldung = `${s.id}/${korrigiereNr ?? "neu"}`;
-    if (live && ti.eintragVon !== ti.ich && angemeldet !== anmeldung) {
+    // Auch wenn der Gastgeber schon zugeteilt hat (Anmeldung kam aus dem Spielende-Panel): merken, sonst meldete sich die
+    // Seite nach einer Freigabe sofort neu an, und die Zurück-Geste meldete nicht ab.
+    if (live && angemeldet !== anmeldung) {
+        if (ti.eintragVon !== ti.ich)
+            c.eintragBeginnt();
         angemeldet = anmeldung;
-        c.eintragBeginnt();
     }
     const ichTrageEin = !live || ti.eintragVon === ti.ich;
+    if (live && ichTrageEin)
+        zugeteilt = anmeldung;
+    // Der Gastgeber hat freigegeben („Nicht warten“) oder das nächste Spiel läuft schon: sagen, was los ist.
+    const freigegeben = live && !ichTrageEin && zugeteilt === anmeldung;
     const zurueck = live ? "#/tisch" : `#/abend/${s.id}`;
     const key = schluessel(s.id, korrigiereNr ?? "neu");
+    // Am Tisch bleibt der Entwurf, bis der Gastgeber ihn angenommen hat: über eine Ablehnung und über ein dazwischen live
+    // gespieltes Spiel hinweg. Erledigt ist er, wenn die abgeschickte Nummer als eingetragenes Spiel im Block steht.
+    if (entwurfErledigt(leseLokal(key)?.gesendetNr, s.spiele))
+        schreibeLokal(key, null);
     let entwurf = { ...startEntwurf(r, s, korrigiereNr), ...(leseLokal(key) ?? {}) };
     const aendern = (teil) => {
         entwurf = { ...entwurf, ...teil };
@@ -177,7 +192,11 @@ export function eintragen(app, teile) {
                 return;
             c.eintragen(eingabe, original?.nr);
             angemeldet = null;
-            schreibeLokal(key, null);
+            zugeteilt = null;
+            if (!original)
+                schreibeLokal(key, { ...entwurf, gesendetNr: nr });
+            else
+                schreibeLokal(key, null);
             app.geheZu("/tisch");
             return;
         }
@@ -206,9 +225,16 @@ export function eintragen(app, teile) {
     return h("div", { class: "seite", style: "gap: 16px" }, filzkopf(original ? `Spiel ${nr} korrigieren` : `Spiel ${nr}`, `${vorhandName} kam raus · ${profil.name}`, {
         rechts: h("a", { class: "knopf", href: zurueck, onclick: () => { schreibeLokal(key, null); if (live) {
                 angemeldet = null;
+                zugeteilt = null;
                 c.eintragAbbrechen();
             } } }, "Abbrechen"),
-    }), meldung(app), live && c.meldung ? h("p", { class: "hinweis fehler", role: "alert" }, c.meldung) : null, live && !ichTrageEin && !c.meldung ? h("p", { class: "leise", role: "status" }, ti.eintragVon !== null ? "Gerade trägt jemand anderes ein Spiel ein." : "Einen Moment, der Tisch hält das Austeilen an …") : null, h("div", { class: "segment", role: "group", "aria-label": "Eingabe" }, ["schnell", "rechner"].map((m) => h("button", {
+    }), meldung(app), live && c.meldung ? h("p", { class: "hinweis fehler", role: "alert" }, c.meldung) : null, freigegeben && !c.meldung ? h("div", { class: "hinweis info", role: "status" }, h("span", {}, ti.eintragVon !== null ? "Gerade trägt jemand anderes ein Spiel ein. Deine Auswahl bleibt."
+        : ti.plaetze.some((p) => p.ki) ? "Mit KI am Tisch geht Eintragen nicht, erst wieder mit vier Menschen. Deine Auswahl bleibt."
+            : ti.eintragenMoeglich ? `${ti.gastgeberName || "Der Gastgeber"} hat nicht gewartet. Deine Auswahl bleibt.`
+                : "Das nächste Spiel läuft, du spielst mit. Deine Auswahl bleibt für danach."), ti.eintragenMoeglich && ti.eintragVon === null && !ti.plaetze.some((p) => p.ki)
+        ? h("button", { class: "knopf", "data-fokus": "weiter-eintragen", onclick: () => { angemeldet = null; zugeteilt = null; app.zeichne(); } }, "Weiter eintragen")
+        : !ti.eintragenMoeglich ? h("a", { class: "knopf", href: "#/tisch", "data-fokus": "zum-tisch" }, "Zum Tisch") : null)
+        : live && !ichTrageEin && !c.meldung ? h("p", { class: "leise", role: "status" }, ti.eintragVon !== null ? "Gerade trägt jemand anderes ein Spiel ein." : "Einen Moment, der Tisch hält das Austeilen an …") : null, h("div", { class: "segment", role: "group", "aria-label": "Eingabe" }, ["schnell", "rechner"].map((m) => h("button", {
         "aria-pressed": String(entwurf.modus === m), "data-fokus": `modus-${m}`,
         onclick: () => { schreibeLokal(MODUS(r.id), m); aendern({ modus: m }); },
     }, m === "schnell" ? "Nur Punkte" : "Rechner"))), entwurf.modus === "schnell" ? schnellTeil() : rechnerTeil(), bockErlaubt(profil)

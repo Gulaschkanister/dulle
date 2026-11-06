@@ -1,7 +1,7 @@
 // Service Worker (Spec 001): speichert alle App-Dateien und liefert sie offline aus.
 // VERSION und DATEIEN setzt werkzeuge/bauen.mjs beim Bauen ein.
 
-const VERSION = "0.1.0-6a6615066f";
+const VERSION = "0.1.0-c7324987ec";
 const DATEIEN = [
   "./",
   "./app/kern/abrechnung.js",
@@ -101,7 +101,8 @@ const CACHE = `dulle-${VERSION}`;
 
 self.addEventListener("install", (ereignis) => {
   // Kein skipWaiting: Die neue Version übernimmt erst, wenn die Seite es erlaubt (nie mitten im Eintragen).
-  ereignis.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(DATEIEN)));
+  // cache: "reload": GitHub Pages schickt max-age; sonst könnte eine alte Datei in den neuen Cache geraten.
+  ereignis.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(DATEIEN.map((url) => new Request(url, { cache: "reload" })))));
 });
 
 self.addEventListener("activate", (ereignis) => {

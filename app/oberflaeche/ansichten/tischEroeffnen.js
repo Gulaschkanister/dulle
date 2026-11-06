@@ -101,7 +101,7 @@ export function tischEroeffnen(app, teile) {
     const bereit = g.alleSitzen() && PLAETZE.every((p) => p === z.eigenerPlatz || g.verbunden(p));
     const info = g.tischInfo(null);
     // Spec 016: Ein Abend, der mit echten Karten begann, hat noch kein Live-Spiel: Wer fehlt, ist noch nicht da, nicht „weg“.
-    const schonLive = g.spiel !== null || ((g.sitzungId ? r.sitzungen[g.sitzungId]?.spiele.some((sp) => sp.daten.eingabe === "direkt") : true) ?? true);
+    const schonLive = g.schonLive();
     // Spec 012: verwaiste Plätze (Neuladen, Übernahme, Verbindung weg) und Ersatz.
     const wegListe = PLAETZE.filter((p) => p !== z.eigenerPlatz && info.plaetze[p - 1].zustand === "weg");
     const seit = (zeit) => {

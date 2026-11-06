@@ -31,7 +31,7 @@ export function runde(app, teile) {
 }
 /** Spec 016: zwei gleichrangige Wege in denselben Abend. */
 function abendBeginnenBlatt(app, rundeId) {
-    const weg = (href, fokus, titel, text) => h("a", { href, "data-fokus": fokus, onclick: () => app.zeigeBlatt(null) }, h("span", { style: "flex-grow: 1" }, h("span", { style: "display: block; font-weight: 600" }, titel), h("span", { class: "leise" }, text)));
+    const weg = (href, fokus, titel, text) => h("a", { href, "data-fokus": fokus, onclick: () => app.zeigeBlatt(null) }, h("span", { class: "eintrag-text" }, h("span", { class: "eintrag-titel" }, titel), h("span", { class: "leise" }, text)));
     return h("div", { class: "gruppe" }, h("h2", { id: "beginnen-titel" }, "Wie spielt ihr?"), h("nav", { class: "liste", "aria-labelledby": "beginnen-titel" }, weg(`#/runde/${rundeId}/am-handy`, "weg-live", "Live spielen", "Karten in der App, jeder am eigenen Handy"), weg(`#/runde/${rundeId}/abend-beginnen`, "weg-echt", "Mit echten Karten", "Einer trägt die Spiele ein")), h("p", { class: "leise", style: "margin: 0" }, "Wechseln geht jederzeit im selben Abend."), h("button", { class: "knopf text", onclick: () => app.zeigeBlatt(null) }, "Abbrechen"));
 }
 //# sourceMappingURL=runde.js.map

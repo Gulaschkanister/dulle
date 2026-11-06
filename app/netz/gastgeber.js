@@ -315,7 +315,15 @@ export class Gastgeber {
             eintragVon: this.eintragVon,
             eintragenMoeglich: this.eintragenMoeglich(),
             schreiberWeiter: this.z.schreiberWeiter ?? false,
+            schonLive: this.schonLive(),
         };
+    }
+    /** Spec 016: Lief an diesem Abend schon ein Spiel am Tisch? Ohne Abend: ja (dann gibt es nichts „noch nicht da“). */
+    schonLive() {
+        if (this.z.spiel)
+            return true;
+        const sitzung = this.sitzung();
+        return sitzung ? sitzung.spiele.some((sp) => sp.daten.eingabe === "direkt") : true;
     }
     // ---------- Spec 016: Spiele von Hand eintragen ----------
     /** Zwischen zwei Spielen, nur mit vier Menschen am Tisch (mit echten Karten spielen nur Menschen). */
@@ -429,6 +437,7 @@ export class Gastgeber {
         this.kanaele.clear();
     }
     async teileAus() {
+        await this.angefangenesSpielVerwerfen();
         for (let versuch = 0; versuch < 20; versuch++) {
             const sitzung = this.sitzung();
             const plaetze = this.z.plaetze.map((s) => s.spielerId);
@@ -443,6 +452,25 @@ export class Gastgeber {
             this.anAlle({ t: "hinweis", text: `Neu gemischt: ${String(grund)}` });
         }
         await this.nachZug();
+    }
+    /**
+     * Wurde die nächste Nummer schon ausgeteilt, aber nie beendet oder neu gegeben (z. B. Übungsabend nach Neuladen ohne
+     * gemerkten Tisch), gilt sie als neu gegeben. So steht keine Nummer zweimal mit Karten im Strom (Prüfer 016).
+     */
+    async angefangenesSpielVerwerfen() {
+        const sitzungId = this.z.sitzungId;
+        const nr = this.sitzung()?.naechsteNr;
+        if (!sitzungId || nr === undefined)
+            return;
+        const dieses = this.ereignisse.filter((e) => e.sitzung === sitzungId);
+        let gegeben = -1;
+        dieses.forEach((e, i) => { if (e.typ === "kartenGegeben" && e.daten.spielNr === nr)
+            gegeben = i; });
+        if (gegeben < 0)
+            return;
+        const erledigt = dieses.slice(gegeben).some((e) => e.typ === "spielNeuGegeben" && e.daten.nr === nr);
+        if (!erledigt)
+            await this.erzeuge("spielNeuGegeben", { nr, grund: "Tisch neu geöffnet" }, sitzungId);
     }
     // ---------- Uhr (Spec 012) ----------
     /** Regelmäßig aufrufen (UI: jede Sekunde; Tests: mit eigener Uhr). Stellt die gemeinsame Frage und führt Wahlen aus. */

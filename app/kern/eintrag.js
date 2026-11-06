@@ -21,6 +21,13 @@ const istText = (x) => typeof x === "string" && x.length > 0 && x.length <= 64;
 const istTexte = (x, max) => Array.isArray(x) && x.length <= max && x.every(istText);
 const istGanz = (x, von, bis) => typeof x === "number" && Number.isInteger(x) && x >= von && x <= bis;
 /**
+ * Ein am Tisch abgeschickter Entwurf ist erledigt, wenn seine Nummer als eingetragenes Spiel im Block steht. Wurde er
+ * abgelehnt oder die Nummer live gespielt, bleibt er (Spec 016).
+ */
+export function entwurfErledigt(gesendetNr, spiele) {
+    return gesendetNr !== undefined && spiele.some((sp) => sp.nr === gesendetNr && sp.daten.eingabe !== "direkt");
+}
+/**
  * Prüft eine Eingabe, die von einem anderen Gerät kommt, auf ihre Form. Inhaltlich (wer am Tisch sitzt, gültige Augen)
  * prüft danach `spielAusEintrag`.
  */

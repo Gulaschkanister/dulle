@@ -134,10 +134,15 @@ export async function eroeffne(app, rundeId, profil, eigenerSpielerId, eigenerPl
         // Eine angenommene Einladung ist erledigt, sobald der Platz verbunden ist; sonst stünde sie nach einer späteren
         // Trennung wieder da („Verbindung wird aufgebaut …“). Bei „KI spielt für“ hält die KI den Kanal, die Einladung bleibt.
         const t = aktiv;
+        // Ebenso eine noch offene QR-Einladung, wenn der Platz inzwischen über einen anderen Weg (Link) wieder sitzt.
+        const sitzen = new Set(g.tischInfo(null).plaetze.filter((x) => x.zustand === "da").map((x) => x.platz));
         if (t?.gastgeber === g)
-            for (const [p, e] of t.einladungen)
-                if (e.link && !e.annehmen && g.verbunden(p) && !g.zustand.plaetze[p - 1].ki)
+            for (const [p, e] of t.einladungen) {
+                if (g.zustand.plaetze[p - 1].ki)
+                    continue;
+                if ((e.link && !e.annehmen && g.verbunden(p)) || (e.annehmen && sitzen.has(p)))
                     t.einladungen.delete(p);
+            }
         app.zeichne();
     };
     client.beiAenderung = () => app.zeichne();

@@ -74,6 +74,8 @@ button, .knopf { font: inherit; color: inherit; }
 .kuerzen { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wahl[aria-pressed="true"], .wahl[aria-checked="true"] { border: 2px solid var(--accent); font-weight: var(--weight-strong); }
 .wahl .marke { font-size: 13px; color: var(--re); }
+/* Leiser Zusatz unter dem Namen („sitzt schon“, „noch nicht da“). */
+.wahl .zusatz { font-size: 13px; color: var(--ink-muted); }
 .wahl.neu { border-style: dashed; color: var(--ink-muted); }
 
 .segment { display: grid; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column; border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
@@ -112,6 +114,11 @@ textarea { padding: var(--s2) var(--s3); }
 .liste { display: flex; flex-direction: column; }
 .liste > * { min-height: 48px; display: flex; align-items: baseline; gap: var(--s2); padding: var(--s2) 0; border-bottom: 1px solid var(--line); }
 .liste a { color: inherit; text-decoration: none; }
+/* Knopf im Hinweis-Kasten: mittig neben dem Text, ohne Umbruch (Designer 016). */
+.hinweis > .knopf { flex-shrink: 0; align-self: center; white-space: nowrap; }
+/* Eintrag mit Titel und einer Zeile Erklärung (z. B. Blatt „Wie spielt ihr?“). */
+.liste .eintrag-text { flex-grow: 1; }
+.liste .eintrag-titel { display: block; font-weight: 600; }
 
 .hinweis { display: flex; gap: var(--s3); align-items: flex-start; padding: var(--s3) var(--s4); border: 1px solid var(--warning); border-radius: var(--r-md); background: var(--surface); font-size: var(--size-small); }
 .hinweis.fehler { border-color: var(--danger); }
@@ -345,7 +352,7 @@ button.spielkarte:focus-visible { outline: 2px solid #F2C14E; outline-offset: 2p
 .platz-zeile { display: flex; align-items: center; gap: var(--s3); min-height: 52px; border-bottom: 1px solid var(--line); }
 .platz-nr { width: 18px; font-family: var(--family-mono); color: var(--ink-muted); }
 .platz-name { flex-grow: 1; min-width: 0; font-weight: var(--weight-strong); overflow-wrap: anywhere; }
-.platz-status { color: var(--ink-muted); font-size: var(--size-small); }
+.platz-status { color: var(--ink-muted); font-size: var(--size-small); white-space: nowrap; flex-shrink: 0; }
 .platz-status::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--warning); }
 .platz-status.ok::before { background: var(--accent); }
 .einladung { align-items: stretch; }
