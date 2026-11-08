@@ -114,7 +114,7 @@ export function karte(id, o = {}) {
     if (o.onclick) {
         return h("button", {
             class: klassen, "aria-label": `${a.name}${o.spielbar ? ", spielbar" : ""}`, "data-karte": id, style: stil,
-            "data-fokus": o.fokus ?? `karte-${id}`, "aria-disabled": o.gedaempft ? "true" : null, onclick: () => o.onclick(),
+            "data-fokus": o.fokus ?? `karte-${id}`, "aria-disabled": (o.inaktiv ?? o.gedaempft) ? "true" : null, onclick: () => o.onclick(),
         }, ...inhalt);
     }
     return h("div", { class: klassen, role: "img", "aria-label": a.name, "data-karte": id, style: stil }, ...inhalt);

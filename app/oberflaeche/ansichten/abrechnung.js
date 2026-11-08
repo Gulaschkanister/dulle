@@ -86,6 +86,6 @@ export function abrechnung(app, teile) {
         : s.schreibendesGeraet === app.geraet
             ? h("button", { class: "knopf haupt", "data-fokus": "abschliessen", onclick: () => void abschliessen() }, "Abend abschließen")
             : [h("p", { class: "leise", style: "margin: 0" }, "Abschließen kann das Gerät, das den Abend schreibt."),
-                h("a", { class: "knopf", href: `#/abend/${s.id}`, "data-fokus": "zum-spielblock" }, "Zum Spielblock")]);
+                h("a", { class: "knopf", href: `#/abend/${s.id}`, "data-fokus": "zum-spielblock" }, "Zum Spielblock")], h("a", { class: "knopf text", href: "#/", "data-fokus": "startseite" }, "Zur Startseite"));
 }
 //# sourceMappingURL=abrechnung.js.map

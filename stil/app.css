@@ -435,10 +435,14 @@ progress.laedt { width: 100%; height: 6px; accent-color: var(--accent); }
 .tisch-meldung { position: absolute; left: 50%; top: 44px; transform: translateX(-50%); max-width: 80vw; padding: 8px 14px; border-radius: 8px;
   background: var(--paper); color: var(--ink); font-size: 14px; z-index: 4; box-shadow: 0 6px 16px rgba(0, 0, 0, .3); }
 .hochkant { display: none; }
-@media (orientation: portrait) {
-  .spieltisch .hochkant { display: flex; position: absolute; inset: 0; z-index: 5; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
-    background: var(--felt); color: #E9F1EC; font-size: 18px; text-align: center; padding: 24px; }
-}
+.spieltisch .hochkant { position: absolute; inset: 0; z-index: 5; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  background: var(--felt); color: #E9F1EC; font-size: 18px; text-align: center; padding: 24px; }
+/* „Quer halten“ nur auf Touch-Geräten (Handy, Tablet). Am PC lässt sich ein Fenster nicht drehen; dort zählt nur die
+   Breite: Unter 700 px liefe der Fächer aus dem Bild (Live-Test 2026-11-07). Kleine Handys quer (667 px) sind Touch. */
+@media (orientation: portrait) and (pointer: coarse) { .spieltisch .hochkant.drehen { display: flex; } }
+@media (pointer: fine) and (max-width: 699px) { .spieltisch .hochkant.breiter { display: flex; } }
+/* Ausweg im Hinweis: als Knopf gesetzt, nicht als unterstrichener Link. */
+.spieltisch .hochkant a.tisch-knopf { display: inline-flex; align-items: center; min-height: 44px; margin-top: 8px; text-decoration: none; }
 @media (max-height: 380px) {
   .hand-faecher .spielkarte + .spielkarte { margin-left: -26px; }
   .tisch-status, .ansage { bottom: 88px; }

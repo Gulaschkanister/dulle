@@ -14,7 +14,7 @@ export function runde(app, teile) {
     const anzahlAusgeblendet = spieler.filter((s) => s.ausgeblendet).length;
     const abende = Object.values(r.sitzungen).filter((s) => !s.verworfen).sort((a, b) => (a.id < b.id ? 1 : -1));
     const offen = app.offeneSitzung(r.id, true);
-    return h("div", { class: "seite" }, filzkopf(r.name, "Runde", { motiv: true, aktionen: [h("a", { class: "knopf", href: "#/" }, "Runde wechseln"), h("a", { class: "knopf", href: `#/runde/${r.id}/statistik`, "data-fokus": "statistik" }, "Statistik")] }), homeHinweis(app), meldung(app), h("section", { class: "gruppe", "aria-labelledby": "spieler-titel" }, h("h2", { id: "spieler-titel" }, "Spieler"), h("div", { class: "chips" }, sichtbar.map((s) => h("a", {
+    return h("div", { class: "seite" }, filzkopf(r.name, "Runde", { motiv: true, aktionen: [h("a", { class: "knopf", href: "#/", "data-fokus": "startseite" }, "Startseite"), h("a", { class: "knopf", href: `#/runde/${r.id}/statistik`, "data-fokus": "statistik" }, "Statistik")] }), homeHinweis(app), meldung(app), h("section", { class: "gruppe", "aria-labelledby": "spieler-titel" }, h("h2", { id: "spieler-titel" }, "Spieler"), h("div", { class: "chips" }, sichtbar.map((s) => h("a", {
         class: `chip${s.ausgeblendet ? " ausgeblendet" : ""}`, "data-fokus": `spieler-${s.id}`, href: `#/runde/${r.id}/spieler/${s.id}`,
         style: "text-decoration: none",
     }, s.name)), h("button", { class: "chip neu", "data-fokus": "spieler-anlegen", onclick: () => app.zeigeBlatt(spielerAnlegenBlatt(app, r)) }, "+ Spieler anlegen")), h("div", { class: "leise" }, spieler.length > 0 ? "Antippen für Statistik, Umbenennen oder Ausblenden" : "Lege die Spieler eurer Runde an, mindestens vier.", anzahlAusgeblendet > 0

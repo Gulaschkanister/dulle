@@ -50,7 +50,11 @@ export function spieltisch(app) {
     const lage = (p) => LAGE[(p - s.ich + 4) % 4];
     const gesamt = mitNeunen(ti.profil) ? 12 : 10;
     return h("div", { class: "spieltisch", "data-phase": s.phase, "data-ich": s.ich, "data-am-zug": s.amZug === s.ich && s.phase !== "ende" ? "ja" : "nein" }, kopfzeile(app, c, s, ti, gesamt), h("div", { class: "tisch-oval", "aria-hidden": "true" }), [1, 2, 3, 4].filter((p) => p !== s.ich).map((p) => gegner(s, ti, p, lage(p), name)), mitte(app, s, ti, satz, lage, name), status(s, ti, satz, name), ansageKnopf(app, c, s), hand(app, c, s), ti.schreiberWeiter && t.rolle === "mitspieler" ? schreiberWeiterPanel(app, ti)
-        : !c.verbunden && t.rolle === "mitspieler" ? verbindungWegPanel(app, t, c, ti, name) : panel(app, c, s, ti, satz, name), c.verbunden && !ti.schreiberWeiter && (c.meldung || hinweisSichtbar(app, c)) ? h("div", { class: "tisch-meldung", role: c.meldung ? "alert" : "status" }, c.meldung ?? c.hinweis) : null, h("div", { class: "hochkant", role: "note" }, h("strong", {}, "Bitte quer halten"), h("span", {}, "Der Spieltisch braucht die Breite.")));
+        : !c.verbunden && t.rolle === "mitspieler" ? verbindungWegPanel(app, t, c, ti, name) : panel(app, c, s, ti, satz, name), c.verbunden && !ti.schreiberWeiter && (c.meldung || hinweisSichtbar(app, c)) ? h("div", { class: "tisch-meldung", role: c.meldung ? "alert" : "status" }, c.meldung ?? c.hinweis) : null, h("div", { class: "hochkant drehen", role: "note" }, h("strong", {}, "Bitte quer halten"), h("span", {}, "Der Spieltisch braucht die Breite.")), 
+    // Am PC (Maus) gibt es kein Drehen; zu schmale Fenster schneiden sonst die Hand ab (Designer, Live-Test 2026-11-07).
+    h("div", { class: "hochkant breiter", role: "note" }, h("strong", {}, "Fenster breiter ziehen"), h("span", {}, "Der Spieltisch braucht mindestens 700 Pixel Breite."), 
+    // Ausweg, falls das Fenster gerade nicht breiter geht (UI-Spezialist).
+    h("a", { class: "tisch-knopf", href: "#/", "data-fokus": "zur-startseite" }, "Zur Startseite")));
 }
 /** Hinweise (z. B. „Neu gemischt“) verschwinden nach 5 s von selbst, damit sie keine spätere Frage verdecken. */
 const HINWEIS_MS = 5000;
@@ -180,7 +184,8 @@ function hand(app, c, s) {
             });
         }
         const spielbar = ichDran && s.erlaubteKarten.includes(id);
-        return karte(id, { spielbar, gedaempft: !spielbar, ...(spielbar ? { onclick: () => c.aktion({ typ: "karte", karte: id }) } : { onclick: () => undefined }) });
+        // Blass nur, was man gerade nicht legen darf. Beim Vorbehalt und wenn andere dran sind, bleibt die Hand gut lesbar.
+        return karte(id, { spielbar, gedaempft: ichDran && !spielbar, inaktiv: !spielbar, ...(spielbar ? { onclick: () => c.aktion({ typ: "karte", karte: id }) } : { onclick: () => undefined }) });
     }));
 }
 // ---------- Dialoge in der Mitte ----------

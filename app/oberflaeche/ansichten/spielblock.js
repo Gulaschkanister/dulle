@@ -163,7 +163,7 @@ function menue(app, r, s) {
         !s.abgeschlossen && !w.schreibtHier && !w.amTisch ? [
             h("p", { class: "leise", style: "margin: 0" }, "Schreibt das andere Gerät nicht mehr, zum Beispiel nach einer Sicherung auf ein neues Handy?"),
             h("button", { class: "knopf", "data-fokus": "hier-weiterschreiben", onclick: () => app.zeigeBlatt(uebernehmenBlatt(app, r, s)) }, "Hier weiterschreiben"),
-        ] : null, h("a", { class: "knopf", href: `#/runde/${r.id}` }, "Zur Runde"), h("button", { class: "knopf text", onclick: () => app.zeigeBlatt(null) }, "Schließen"));
+        ] : null, h("a", { class: "knopf", href: `#/runde/${r.id}` }, "Zur Runde"), h("a", { class: "knopf", href: "#/", onclick: () => app.zeigeBlatt(null) }, "Zur Startseite"), h("button", { class: "knopf text", onclick: () => app.zeigeBlatt(null) }, "Schließen"));
     }
     return h("div", { class: "gruppe" }, h("h2", {}, "Menü"), h("button", {
         class: "knopf", "data-fokus": "schmeissen",
@@ -181,7 +181,7 @@ function menue(app, r, s) {
                 app.zeigeBlatt(null);
             }
         })),
-    }, "Regeln ändern"), h("a", { class: "knopf", href: `#/abend/${s.id}/abrechnung` }, "Abend abschließen"), h("a", { class: "knopf", href: `#/runde/${r.id}` }, "Zur Runde"), h("button", { class: "knopf text", onclick: () => app.zeigeBlatt(null) }, "Schließen"));
+    }, "Regeln ändern"), h("a", { class: "knopf", href: `#/abend/${s.id}/abrechnung` }, "Abend abschließen"), h("a", { class: "knopf", href: `#/runde/${r.id}` }, "Zur Runde"), h("a", { class: "knopf", href: "#/", onclick: () => app.zeigeBlatt(null) }, "Zur Startseite"), h("button", { class: "knopf text", onclick: () => app.zeigeBlatt(null) }, "Schließen"));
 }
 /** Spec 016: Rückfrage, bevor dieses Gerät den Abend weiterschreibt. Zwei Geräte sollen nie denselben Abend schreiben. */
 function uebernehmenBlatt(app, r, s) {
