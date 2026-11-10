@@ -1,5 +1,5 @@
 // Einstellungen dieses Geräts (Spec 011, 030, 005): Kartensatz, Verbindung (TURN), Export an eine eigene Seite.
-import { filzkopf, meldung } from "../bausteine.js";
+import { filzkopf, installieren, kurzanleitung, meldung } from "../bausteine.js";
 import { h } from "../dom.js";
 import { alleKartensaetze, istEigener, karte, kartensatz, loescheKartensatz, speichereKartensatz, waehleKartensatz } from "../karten.js";
 import { pruefeKartensatz } from "../../kern/kartensatz.js";
@@ -12,7 +12,9 @@ const VORSCHAU = ["herz-A-a", "herz-10-a", "herz-K-a", "herz-D-a", "herz-B-a", "
 const FARBEN = ["kreuz-D-a", "pik-D-a", "herz-D-a", "karo-D-a"];
 export function einstellungen(app) {
     const aktuell = kartensatz().id;
-    return h("div", { class: "seite" }, filzkopf("Einstellungen", "Gilt nur für dieses Gerät", { rechts: h("a", { class: "knopf", href: "#/" }, "Zurück") }), meldung(app), h("section", { class: "gruppe", "aria-labelledby": "kartensatz-titel" }, h("h2", { id: "kartensatz-titel" }, "Kartensatz"), h("div", { class: "liste-saetze", role: "radiogroup", "aria-labelledby": "kartensatz-titel" }, alleKartensaetze().map((satz) => h("button", {
+    return h("div", { class: "seite" }, filzkopf("Einstellungen", "Gilt nur für dieses Gerät", { rechts: h("a", { class: "knopf", href: "#/" }, "Zurück") }), meldung(app), 
+    // Spec 017: Hilfe mit Kurzanleitung und „Als App installieren“.
+    h("section", { class: "gruppe", "aria-labelledby": "hilfe-titel" }, h("h2", { id: "hilfe-titel" }, "Hilfe"), kurzanleitung(true), h("p", { class: "leise", style: "margin: 0" }, h("b", {}, "Als App installieren: "), "Am iPhone in Safari das Teilen-Symbol, dann „Zum Home-Bildschirm“. Auf Android im Browser-Menü „App installieren“."), app.installAngebot ? h("button", { class: "knopf", "data-fokus": "hilfe-installieren", onclick: () => void installieren(app) }, "Jetzt installieren") : null), h("section", { class: "gruppe", "aria-labelledby": "kartensatz-titel" }, h("h2", { id: "kartensatz-titel" }, "Kartensatz"), h("div", { class: "liste-saetze", role: "radiogroup", "aria-labelledby": "kartensatz-titel" }, alleKartensaetze().map((satz) => h("button", {
         class: "wahl satz-wahl", role: "radio", "aria-checked": String(satz.id === aktuell), "data-fokus": `satz-${satz.id}`,
         onclick: () => { waehleKartensatz(satz.id); app.zeichne(); },
     }, h("span", { class: "satz-kopf" }, h("strong", {}, satz.name), h("span", { class: "leise" }, satz.beschreibung)), h("span", { class: "satz-reihe", "aria-hidden": "true" }, VORSCHAU.map((id) => karte(id, { groesse: "klein", satz }))), h("span", { class: "satz-reihe", "aria-hidden": "true" }, FARBEN.map((id) => karte(id, { groesse: "klein", satz })))))), 

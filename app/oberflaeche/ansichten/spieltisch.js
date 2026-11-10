@@ -8,7 +8,7 @@ import { bewegungMs, kopf } from "../bausteine.js";
 import { h, punkteText } from "../dom.js";
 import { karte, kartensatz } from "../karten.js";
 import { qrCode, scanne } from "../qr.js";
-import { darfUebernehmen, fortsetzenAlsMitspieler, mitEchtenKartenWeiter, RAUM_GEDULD_MS, raumOffen, letzterStand, schliesseTisch, tisch, uebergeben, uebernehmen, wachBleiben, zurueckkehren, } from "../tisch.js";
+import { abendBeenden, darfUebernehmen, fortsetzenAlsMitspieler, mitEchtenKartenWeiter, RAUM_GEDULD_MS, raumOffen, letzterStand, schliesseTisch, tisch, uebergeben, uebernehmen, wachBleiben, zurueckkehren, } from "../tisch.js";
 const SOLONAME = { damen: "Damen", buben: "Buben", fleischlos: "Fleischlos", kreuz: "Kreuz", pik: "Pik", herz: "Herz", karo: "Karo" };
 const STUFE_TEXT = { ansage: "", k90: "keine 90", k60: "keine 60", k30: "keine 30", schwarz: "schwarz" };
 const LAGE = ["unten", "links", "oben", "rechts"];
@@ -49,8 +49,9 @@ export function spieltisch(app) {
     const name = (p) => ti.plaetze[p - 1]?.name ?? `Platz ${p}`;
     const lage = (p) => LAGE[(p - s.ich + 4) % 4];
     const gesamt = mitNeunen(ti.profil) ? 12 : 10;
-    return h("div", { class: "spieltisch", "data-phase": s.phase, "data-ich": s.ich, "data-am-zug": s.amZug === s.ich && s.phase !== "ende" ? "ja" : "nein" }, kopfzeile(app, c, s, ti, gesamt), h("div", { class: "tisch-oval", "aria-hidden": "true" }), [1, 2, 3, 4].filter((p) => p !== s.ich).map((p) => gegner(s, ti, p, lage(p), name)), mitte(app, s, ti, satz, lage, name), status(s, ti, satz, name), ansageKnopf(app, c, s), hand(app, c, s), ti.schreiberWeiter && t.rolle === "mitspieler" ? schreiberWeiterPanel(app, ti)
-        : !c.verbunden && t.rolle === "mitspieler" ? verbindungWegPanel(app, t, c, ti, name) : panel(app, c, s, ti, satz, name), c.verbunden && !ti.schreiberWeiter && (c.meldung || hinweisSichtbar(app, c)) ? h("div", { class: "tisch-meldung", role: c.meldung ? "alert" : "status" }, c.meldung ?? c.hinweis) : null, h("div", { class: "hochkant drehen", role: "note" }, h("strong", {}, "Bitte quer halten"), h("span", {}, "Der Spieltisch braucht die Breite.")), 
+    return h("div", { class: "spieltisch", "data-phase": s.phase, "data-ich": s.ich, "data-am-zug": s.amZug === s.ich && s.phase !== "ende" ? "ja" : "nein" }, kopfzeile(app, c, s, ti, gesamt), h("div", { class: "tisch-oval", "aria-hidden": "true" }), [1, 2, 3, 4].filter((p) => p !== s.ich).map((p) => gegner(s, ti, p, lage(p), name)), mitte(app, s, ti, satz, lage, name), status(s, ti, satz, name), ansageKnopf(app, c, s), hand(app, c, s), ti.beendet && t.rolle === "mitspieler" ? beendetPanel(app, ti, s.phase !== "ende")
+        : ti.schreiberWeiter && t.rolle === "mitspieler" ? schreiberWeiterPanel(app, ti)
+            : !c.verbunden && t.rolle === "mitspieler" ? verbindungWegPanel(app, t, c, ti, name) : panel(app, c, s, ti, satz, name), c.verbunden && !ti.schreiberWeiter && (c.meldung || hinweisSichtbar(app, c)) ? h("div", { class: "tisch-meldung", role: c.meldung ? "alert" : "status" }, c.meldung ?? c.hinweis) : null, h("div", { class: "hochkant drehen", role: "note" }, h("strong", {}, "Bitte quer halten"), h("span", {}, "Der Spieltisch braucht die Breite.")), 
     // Am PC (Maus) gibt es kein Drehen; zu schmale Fenster schneiden sonst die Hand ab (Designer, Live-Test 2026-11-07).
     h("div", { class: "hochkant breiter", role: "note" }, h("strong", {}, "Fenster breiter ziehen"), h("span", {}, "Der Spieltisch braucht mindestens 700 Pixel Breite."), 
     // Ausweg, falls das Fenster gerade nicht breiter geht (UI-Spezialist).
@@ -87,7 +88,7 @@ function kopfzeile(app, c, s, ti, gesamt) {
     const holen = tisch()?.rolle === "gastgeber"
         ? ti.plaetze.find((p) => ti.ersatzFuer === p.platz || (p.zustand === "weg" && !p.zurueckgeholt && !kommtSelbst(ti, p)) || p.ki === "fuer") : undefined;
     return h("header", { class: "tisch-kopf" }, h("span", { class: "tisch-info" }, `Spiel ${s.spielNr} · ${typText(s, (p) => ti.plaetze[p - 1]?.name ?? "")}${s.phase === "spiel" ? ` · Stich ${stich} von ${gesamt}` : ""}`), h("span", { class: "dehnen" }), holen ? h("a", { class: "tisch-knopf hervor", href: `#/runde/${ti.rundeId}/am-handy`, "data-fokus": "zurueckholen" }, ti.ersatzFuer === holen.platz ? "Ersatz einladen" : `${holen.name} zurückholen`) : null, s.eigenePartei && s.phase !== "vorbehalt" && s.phase !== "vorbehaltArt"
-        ? h("span", { class: `partei-marke ${s.eigenePartei}` }, `Du spielst ${s.eigenePartei === "re" ? "Re" : "Kontra"}`) : null, h("button", { class: "tisch-knopf", "data-fokus": "menue", onclick: () => app.zeigeBlatt(menue(app, c, ti)) }, "Menü"));
+        ? h("span", { class: `partei-marke ${s.eigenePartei}` }, `Du spielst ${s.eigenePartei === "re" ? "Re" : "Kontra"}`) : null, ti.sitzungId ? h("button", { class: "tisch-knopf", "data-fokus": "stand", onclick: () => app.zeigeBlatt(standBlatt(app, ti)) }, "Stand") : null, h("button", { class: "tisch-knopf", "data-fokus": "menue", onclick: () => app.zeigeBlatt(menue(app, c, ti)) }, "Menü"));
 }
 function gegner(s, ti, p, wo, name) {
     const stiche = s.stiche.filter((st) => st.gewinner === p).length;
@@ -191,7 +192,7 @@ function hand(app, c, s) {
 // ---------- Dialoge in der Mitte ----------
 function panel(app, c, s, ti, satz, name) {
     if (ti.beendet)
-        return beendetPanel(app, ti);
+        return beendetPanel(app, ti, s.phase !== "ende");
     if (ti.wechsel && ti.wechsel.platz !== s.ich && wechselVerborgen !== ti.wechsel.platz)
         return wechselPanel(app, c, ti.wechsel.platz, name);
     if (ti.frage && ti.frage.platz !== s.ich)
@@ -264,7 +265,13 @@ function endePanel(app, s, ti, name) {
     const nameVon = (id) => name((ids.indexOf(id) + 1));
     const namen = d.gewinner.map(nameVon);
     const aufgezaehlt = namen.length > 1 ? `${namen.slice(0, -1).join(", ")} und ${namen.at(-1)}` : (namen[0] ?? "");
-    const titel = namen.length === 0 ? "Niemand gewinnt" : `${aufgezaehlt} ${namen.length === 1 ? "gewinnt" : "gewinnen"}`;
+    const meineId = ids[s.ich - 1] ?? "";
+    const ich = d.gewinner.includes(meineId);
+    const partner = d.gewinner.filter((id) => id !== meineId).map(nameVon);
+    const titel = namen.length === 0 ? "Niemand gewinnt"
+        : ich ? (partner.length === 0 ? "Du gewinnst" : `Du gewinnst mit ${partner.join(" und ")}`)
+            : d.punkte[meineId] !== undefined ? `Du verlierst gegen ${aufgezaehlt}`
+                : `${aufgezaehlt} ${namen.length === 1 ? "gewinnt" : "gewinnen"}`;
     let aufschluss = "";
     const r = spielAusRechner({
         nr: d.nr, vorhand: d.vorhand, amTisch: ids, spielart: d.spielart, re: d.re ?? [], augenRe: d.augenRe ?? 0, ansagen: d.ansagen ?? [], bock: d.bock,
@@ -277,7 +284,7 @@ function endePanel(app, s, ti, name) {
     const gastgeber = tisch()?.gastgeber;
     const c = tisch()?.client;
     const traegtEin = ti.eintragVon !== null ? (ti.eintragVon === ti.ich ? "Du trägst gerade ein Spiel ein." : `${name(ti.eintragVon)} trägt ein Spiel ein …`) : null;
-    return h("section", { class: "tisch-panel ende", "aria-label": "Spielende" }, h("div", { class: "zeile" }, h("h2", { style: "flex-grow: 1" }, titel), h("strong", {}, `${d.wert} ${d.wert === 1 ? "Punkt" : "Punkte"}`)), h("p", { class: "leise", style: "margin: 0", "data-aufschluesselung": "" }, [`Re ${d.augenRe} Augen`, aufschluss, praemie].filter(Boolean).join(" · ")), h("div", { class: "verteilung" }, ids.map((id) => h("div", {}, h("span", { class: "name" }, nameVon(id)), h("span", { class: "wert", "data-ergebnis": nameVon(id) }, punkteText((d.punkte[id] ?? 0) + (d.praemie?.[id] ?? 0), true))))), traegtEin ? h("p", { style: "margin: 0", role: "status", "data-eintrag": "" }, traegtEin) : null, 
+    return h("section", { class: "tisch-panel ende", "aria-label": "Spielende" }, h("div", { class: "zeile" }, h("h2", { style: "flex-grow: 1" }, titel), h("strong", {}, `${d.wert} ${d.wert === 1 ? "Punkt" : "Punkte"}`)), h("p", { class: "leise", style: "margin: 0", "data-aufschluesselung": "" }, [`Re ${d.augenRe} Augen`, aufschluss, praemie].filter(Boolean).join(" · ")), h("div", { class: "verteilung" }, ids.map((id) => h("div", {}, h("span", { class: "name" }, id === meineId ? "du" : nameVon(id)), h("span", { class: "wert", "data-ergebnis": nameVon(id) }, punkteText((d.punkte[id] ?? 0) + (d.praemie?.[id] ?? 0), true)), ti.stand ? h("span", { class: "gesamt", "data-gesamt": nameVon(id) }, `gesamt ${punkteText(ti.stand.summen[id] ?? 0, true)}`) : null))), traegtEin ? h("p", { style: "margin: 0", role: "status", "data-eintrag": "" }, traegtEin) : null, 
     // Der Gastgeber muss nicht ewig warten, z. B. wenn jemand die Eingabe verlassen hat.
     gastgeber
         ? h("button", { class: "knopf haupt", "data-fokus": "naechstes", disabled: ti.eintragVon !== null, onclick: () => void gastgeber.naechstesSpiel() }, "Nächstes Spiel")
@@ -288,7 +295,12 @@ function endePanel(app, s, ti, name) {
     // Der Gastgeber muss nicht ewig warten, z. B. wenn jemand die Eingabe verlassen hat.
     gastgeber && ti.eintragVon !== null && ti.eintragVon !== ti.ich
         ? h("button", { class: "knopf", "data-fokus": "trotzdem", onclick: () => gastgeber.eintragFreigeben() }, "Nicht warten, weiter spielen") : null, c && ti.eintragenMoeglich && ti.eintragVon === null
-        ? h("button", { class: "knopf", "data-fokus": "eintragen", onclick: () => eintragStarten(app, c, ti) }, "Spiel eintragen") : null, ti.sitzungId ? h("a", { class: "knopf text", href: `#/abend/${ti.sitzungId}` }, "Spielblock ansehen") : null));
+        ? h("button", { class: "knopf", "data-fokus": "eintragen", onclick: () => eintragStarten(app, c, ti) }, "Spiel eintragen") : null, ti.sitzungId ? h("a", { class: "knopf text", href: `#/abend/${ti.sitzungId}` }, "Spielblock ansehen") : null, 
+    // Spec 017: Der natürliche Moment zum Aufhören. Mit Rückfrage, weil es alle betrifft.
+    gastgeber && ti.sitzungId ? h("button", { class: "knopf text", "data-fokus": "ende-beenden", onclick: () => { if (nurKi(ti))
+            void abendBeenden(app, true);
+        else
+            app.zeigeBlatt(beendenBlatt(app, false)); } }, nurKi(ti) ? "Üben beenden" : "Abend beenden") : null));
 }
 // ---------- Wiederverbinden (Spec 012, Mockup „Verbindung weg“) ----------
 /** Gemeinsame Frage, wenn ein Platz verwaist ist: Alle Verbliebenen sehen dasselbe, die erste Wahl gilt. */
@@ -310,11 +322,50 @@ function fragePanel(c, s, ti, name) {
 function wechselPanel(app, c, platz, name) {
     return h("section", { class: "tisch-panel klein", "aria-label": "Neues Gerät" }, h("h2", {}, `${name(platz)} auf neuem Gerät?`), h("p", { class: "leise", style: "margin: 0" }, `Ein anderes Handy möchte an ${name(platz)}s Platz. Bestätige nur, wenn ${name(platz)} es wirklich in der Hand hat. Das alte Gerät verliert den Platz.`), h("div", { class: "raster-2" }, h("button", { class: "knopf haupt", "data-fokus": "wechsel-ja", onclick: () => c.bestaetige(platz) }, `Ja, das ist ${name(platz)}`), h("button", { class: "knopf", "data-fokus": "wechsel-nein", onclick: () => { wechselVerborgen = platz; app.zeichne(); } }, "Nicht bestätigen")));
 }
-function beendetPanel(app, ti) {
+function beendetPanel(app, ti, unterbrochen) {
     const gastgeber = tisch()?.rolle === "gastgeber";
-    return h("section", { class: "tisch-panel", "aria-label": "Abend beendet" }, h("h2", {}, "Abend beendet"), h("p", { class: "leise", style: "margin: 0" }, "Alle abgeschlossenen Spiele bleiben gespeichert. Das unterbrochene Spiel zählt nicht."), gastgeber && ti.sitzungId
+    return h("section", { class: "tisch-panel", "aria-label": "Abend beendet" }, h("h2", {}, "Abend beendet"), h("p", { class: "leise", style: "margin: 0" }, unterbrochen ? "Alle abgeschlossenen Spiele bleiben gespeichert. Das unterbrochene Spiel zählt nicht." : "Alle Spiele bleiben gespeichert."), gastgeber && ti.sitzungId
         ? h("button", { class: "knopf haupt", "data-fokus": "zur-abrechnung", onclick: async () => { await schliesseTisch(app); app.geheZu(`/abend/${ti.sitzungId}/abrechnung`); } }, "Zur Abrechnung")
-        : h("button", { class: "knopf haupt", "data-fokus": "tisch-verlassen", onclick: async () => { tisch()?.client?.trennen(); await schliesseTisch(app); app.geheZu(ti.sitzungId ? `/abend/${ti.sitzungId}` : "/"); } }, "Zum Spielblock"));
+        : [h("button", { class: "knopf haupt", "data-fokus": "tisch-verlassen", onclick: async () => { tisch()?.client?.trennen(); await schliesseTisch(app); app.geheZu(ti.sitzungId ? `/abend/${ti.sitzungId}` : "/"); } }, "Zum Spielblock"),
+            h("button", { class: "knopf text", "data-fokus": "zur-startseite", onclick: async () => { tisch()?.client?.trennen(); await schliesseTisch(app); app.geheZu("/"); } }, "Zur Startseite")]);
+}
+/** Spec 012, geplant: an wen der Tisch gehen kann (verbunden, Mensch). */
+const uebergabeZiele = (ti) => ti.plaetze.filter((p) => p.platz !== ti.ich && p.zustand === "da" && !p.ki);
+/** Spec 017 (UI): die Übergabe gebündelt in einem Blatt, damit das Menü kurz bleibt. */
+function uebergabeBlatt(app, ti) {
+    return h("div", { class: "gruppe" }, h("div", { class: "blatt-kopf" }, h("h2", {}, "Tisch übergeben"), h("button", { class: "knopf text", onclick: () => app.zeigeBlatt(null) }, "Abbrechen")), h("p", { class: "leise", style: "margin: 0" }, "Das andere Gerät hält dann die Karten. Du spielst normal weiter."), uebergabeZiele(ti).map((p) => h("button", {
+        class: "knopf", "data-fokus": `uebergeben-${p.platz}`,
+        onclick: async () => {
+            app.zeigeBlatt(null);
+            const fehler = await uebergeben(app, p.platz);
+            if (fehler)
+                app.melde(fehler);
+            else
+                app.geheZu("/tisch");
+        },
+    }, `An ${p.name} übergeben`)));
+}
+/** Spec 017: Nur KI an den anderen Plätzen (Gegen die KI üben). */
+const nurKi = (ti) => ti.plaetze.every((p) => p.platz === ti.ich || p.ki);
+/** Spec 017: Rückfrage, weil „Abend beenden“ alle betrifft. */
+function beendenBlatt(app, laeuft) {
+    return h("div", { class: "gruppe" }, h("h2", {}, "Abend für alle beenden?"), h("p", { class: "leise", style: "margin: 0" }, laeuft
+        ? "Das laufende Spiel zählt nicht. Alle anderen Spiele bleiben gespeichert, danach kommt die Abrechnung."
+        : "Alle Spiele bleiben gespeichert, danach kommt die Abrechnung."), h("button", { class: "knopf haupt", "data-fokus": "beenden-ja", onclick: async () => { app.zeigeBlatt(null); await abendBeenden(app); } }, "Beenden"), h("button", { class: "knopf text", onclick: () => app.zeigeBlatt(null) }, "Abbrechen"));
+}
+/** Spec 017: Stand des Abends über dem Tisch (Summen wie im Spielblock), ohne den Tisch zu verlassen. */
+function standBlatt(app, ti) {
+    const stand = ti.stand;
+    const reihe = ti.plaetze.filter((p) => p.spielerId).map((p) => ({ name: p.platz === ti.ich ? `${p.name ?? ""} (du)` : p.name ?? "", wert: stand?.summen[p.spielerId] ?? 0 }))
+        .sort((a, b) => b.wert - a.wert);
+    return h("div", { class: "gruppe", "aria-label": "Stand des Abends" }, h("div", { class: "blatt-kopf" }, h("h2", {}, "Stand des Abends"), h("button", { class: "knopf text", onclick: () => app.zeigeBlatt(null) }, "Schließen")), h("p", { class: "leise", style: "margin: 0" }, stand ? `Nach ${stand.spiele} ${stand.spiele === 1 ? "Spiel" : "Spielen"}` : "Noch kein Spiel."), h("div", { class: "stand-liste" }, reihe.map((z) => h("div", { class: "stand-zeile" }, h("span", {}, z.name), h("strong", { "data-stand": z.name }, punkteText(z.wert, true))))), ti.sitzungId ? h("a", { class: "knopf", href: `#/abend/${ti.sitzungId}`, onclick: () => app.zeigeBlatt(null) }, "Ganzer Spielblock") : null);
+}
+/** Spec 017: den eigenen Namen ändern; der Gastgeber trägt ihn ein. */
+export function nameBlatt(app, c, jetzt) {
+    let wert = jetzt;
+    const speichern = () => { const n = wert.trim(); if (!n)
+        return; c.umbenennen(n); app.zeigeBlatt(null); };
+    return h("form", { class: "gruppe", onsubmit: (e) => { e.preventDefault(); speichern(); } }, h("h2", {}, "Dein Name"), h("label", { for: "eigener-name" }, "So sehen dich die anderen"), h("input", { id: "eigener-name", type: "text", maxlength: 24, value: jetzt, "data-fokus": "eigener-name", oninput: (e) => { wert = e.target.value; } }), h("button", { class: "knopf haupt", type: "submit" }, "Speichern"), h("button", { class: "knopf text", type: "button", onclick: () => app.zeigeBlatt(null) }, "Abbrechen"));
 }
 /** Mitspieler ohne Verbindung: letzter Stand bleibt stehen, darüber der Weg zurück (Stufe 3) und, wenn dran, die Übernahme. */
 function verbindungWegPanel(app, t, c, ti, name) {
@@ -378,7 +429,14 @@ function verbindungWegPanel(app, t, c, ti, name) {
 function menue(app, c, ti) {
     const t = tisch();
     const gastgeber = t?.rolle === "gastgeber";
-    return h("div", { class: "gruppe" }, h("h2", {}, "Menü"), ti.sitzungId ? h("a", { class: "knopf", href: `#/abend/${ti.sitzungId}`, onclick: () => app.zeigeBlatt(null) }, "Spielblock ansehen") : null, 
+    const ueben = nurKi(ti);
+    const laeuft = !!t?.gastgeber?.spiel && t.gastgeber.spiel.phase !== "ende";
+    const meinName = ti.plaetze.find((p) => p.platz === ti.ich)?.name ?? "";
+    return h("div", { class: "gruppe" }, h("div", { class: "blatt-kopf" }, h("h2", {}, "Menü"), h("button", { class: "knopf text", "data-fokus": "menue-schliessen", onclick: () => app.zeigeBlatt(null) }, "Schließen")), ti.sitzungId ? h("a", { class: "knopf", href: `#/abend/${ti.sitzungId}`, onclick: () => app.zeigeBlatt(null) }, "Spielblock ansehen") : null, 
+    // Spec 017 (UI): Aufhören steht oben, damit es quer ohne Scrollen zu sehen ist (so nennt es die Kurzanleitung).
+    gastgeber && ti.sitzungId ? (ueben
+        ? h("button", { class: "knopf", "data-fokus": "ueben-beenden", onclick: async () => { app.zeigeBlatt(null); await abendBeenden(app, true); } }, "Üben beenden")
+        : h("button", { class: "knopf", "data-fokus": "abend-beenden", onclick: () => app.zeigeBlatt(beendenBlatt(app, laeuft)) }, "Abend beenden …")) : null, 
     // Spec 016: Eintragen geht zwischen zwei Spielen; mitten im Spiel steht, wann es geht.
     nurMenschen(ti) && ti.sitzungId ? h("button", {
         class: "knopf", "data-fokus": "menue-eintragen", disabled: !ti.eintragenMoeglich || (ti.eintragVon !== null && ti.eintragVon !== ti.ich),
@@ -387,20 +445,9 @@ function menue(app, c, ti) {
         class: "knopf", "data-fokus": "echte-karten",
         onclick: async () => { app.zeigeBlatt(null); const f = await mitEchtenKartenWeiter(app); if (f)
             app.melde(f); },
-    }, "Mit echten Karten weiter") : null, h("a", { class: "knopf", href: "#/einstellungen", onclick: () => app.zeigeBlatt(null) }, "Kartensatz ändern"), gastgeber ? h("a", { class: "knopf", href: `#/runde/${ti.rundeId}/am-handy`, onclick: () => app.zeigeBlatt(null) }, "Mitspieler neu einladen") : null, 
+    }, "Mit echten Karten weiter") : null, h("a", { class: "knopf", href: "#/einstellungen", onclick: () => app.zeigeBlatt(null) }, "Kartensatz ändern"), ti.ich && !ueben ? h("button", { class: "knopf", "data-fokus": "name-aendern", onclick: () => app.zeigeBlatt(nameBlatt(app, c, meinName)) }, "Name ändern") : null, gastgeber && !ueben ? h("a", { class: "knopf", href: `#/runde/${ti.rundeId}/am-handy`, onclick: () => app.zeigeBlatt(null) }, "Mitspieler neu einladen") : null, 
     // Spec 012, geplant: zwischen zwei Spielen an ein verbundenes Gerät übergeben.
-    gastgeber && (!t?.gastgeber?.spiel || t.gastgeber.spiel.phase === "ende") ? ti.plaetze.filter((p) => p.platz !== ti.ich && p.zustand === "da").map((p) => h("button", {
-        class: "knopf", "data-fokus": `uebergeben-${p.platz}`,
-        onclick: async () => {
-            app.zeigeBlatt(null);
-            const fehler = await uebergeben(app, p.platz);
-            if (fehler)
-                app.melde(fehler);
-            else
-                app.geheZu("/tisch");
-        },
-    }, `Tisch an ${p.name} übergeben`)) : null, gastgeber && ti.sitzungId ? h("button", {
-        class: "knopf", onclick: async () => { app.zeigeBlatt(null); await schliesseTisch(app); app.geheZu(`/abend/${ti.sitzungId}/abrechnung`); },
-    }, "Abend abschließen") : null, !gastgeber ? h("button", { class: "knopf", onclick: async () => { app.zeigeBlatt(null); c.trennen(); await schliesseTisch(app); app.geheZu("/"); } }, "Tisch verlassen") : null, h("button", { class: "knopf text", onclick: () => app.zeigeBlatt(null) }, "Schließen"));
+    gastgeber && (!t?.gastgeber?.spiel || t.gastgeber.spiel.phase === "ende") && uebergabeZiele(ti).length > 0
+        ? h("button", { class: "knopf", "data-fokus": "uebergeben", onclick: () => app.zeigeBlatt(uebergabeBlatt(app, ti)) }, "Tisch übergeben …") : null, !gastgeber ? h("button", { class: "knopf", onclick: async () => { app.zeigeBlatt(null); c.trennen(); await schliesseTisch(app); app.geheZu("/"); } }, "Tisch verlassen") : null);
 }
 //# sourceMappingURL=spieltisch.js.map

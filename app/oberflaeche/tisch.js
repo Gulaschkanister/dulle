@@ -88,7 +88,7 @@ function starteUhr(app) {
         void t.gastgeber?.tick();
         if (t.rolle === "gastgeber" && !gastgeberRaum)
             void raumOeffnen(app);
-        if (t.rolle === "mitspieler" && t.client && !t.client.verbunden && !t.client.tisch?.schreiberWeiter)
+        if (t.rolle === "mitspieler" && t.client && !t.client.verbunden && !t.client.tisch?.schreiberWeiter && !t.client.tisch?.beendet)
             void zurueckUeberRaum(app);
         const ti = t.client?.tisch;
         const zaehlt = ti && (ti.plaetze.some((p) => p.zustand === "weg") || ti.wahl !== null) || (t.client && !t.client.verbunden);
@@ -117,7 +117,7 @@ export async function eroeffne(app, rundeId, profil, eigenerSpielerId, eigenerPl
         rundeId, profil, geraet: app.geraet, ereignisse, ...(v ? { version: v } : {}), kiRechner: guteKi,
         speichere: async (neu) => {
             await app.speicher.fuegeHinzu(neu);
-            if (neu.some((e) => ["sitzungBegonnen", "spielBeendet", "spielEingetragen", "spielKorrigiert", "spielerAngelegt", "spielNeuGegeben", "plaetzeGeaendert"].includes(e.typ)))
+            if (neu.some((e) => ["sitzungBegonnen", "spielBeendet", "spielEingetragen", "spielKorrigiert", "spielerAngelegt", "spielerUmbenannt", "spielNeuGegeben", "plaetzeGeaendert"].includes(e.typ)))
                 await app.ladeNeu();
         },
         merke: async (z) => {
@@ -231,8 +231,7 @@ export async function mitEchtenKartenWeiter(app) {
     if (f)
         return f;
     // Die anderen haben den Hinweis bekommen; danach gehen die Verbindungen zu.
-    setTimeout(() => g.schliesseAlle(), 1500);
-    await schliesseTisch(app);
+    await tischZuMitFrist(app, g);
     app.geheZu(`/abend/${sitzungId}`);
     return null;
 }
@@ -532,6 +531,32 @@ export async function uebernehmen(app, zustandVomGastgeber, tischInfo, geplant) 
     };
     aktiv?.client?.trennen();
     await eroeffne(app, tischInfo.rundeId, tischInfo.profil, eigenerSpielerId, ich, zustand, { vonGeraet: tischInfo.gastgeberGeraet, geplant });
+}
+/**
+ * Spec 017: Der Gastgeber beendet den Abend für alle. Alle sehen „Abend beendet“, danach gehen die Verbindungen zu.
+ * Üben endet auf der Startseite, sonst geht es zur Abrechnung.
+ */
+export async function abendBeenden(app, ueben = false) {
+    const g = aktiv?.gastgeber;
+    const sitzungId = g?.sitzungId;
+    if (!g || !sitzungId)
+        return;
+    await g.beendeAbend();
+    // Die anderen haben „Abend beendet“ bekommen; danach gehen die Verbindungen zu (wie „Mit echten Karten weiter“).
+    await tischZuMitFrist(app, g);
+    app.geheZu(ueben ? "/" : `/abend/${sitzungId}/abrechnung`);
+}
+/**
+ * Spec 017 (Prüfer): Der Gastgeber schließt den Tisch, nachdem er allen etwas Letztes gesagt hat. Er wird sofort
+ * stillgelegt (keine Ereignisse, kein Merken mehr), der gespeicherte Tisch ist weg. Kanäle und Raum (Link-Gäste) bleiben
+ * noch 1,5 s offen, damit die letzte Nachricht ankommt (pc.close() und room.leave() verwerfen den Puffer).
+ */
+async function tischZuMitFrist(app, g) {
+    g.stilllegen();
+    const raum = gastgeberRaum;
+    gastgeberRaum = null;
+    await schliesseTisch(app);
+    setTimeout(() => { g.schliesseAlle(); raum?.verlasse(); }, 1500);
 }
 /** Tisch auf diesem Gerät beenden (Abend abschließen oder verlassen). */
 export async function schliesseTisch(app) {

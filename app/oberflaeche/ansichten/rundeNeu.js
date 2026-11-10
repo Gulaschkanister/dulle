@@ -5,7 +5,11 @@ import { NACH_ANLEGEN } from "./start.js";
 import { filzkopf, meldung } from "../bausteine.js";
 import { h } from "../dom.js";
 let entwurf = { name: "", spieler: [], eingabe: "" };
+let vorbelegt = false;
 export function rundeNeu(app) {
+    if (!vorbelegt && !entwurf.name && leseLokal(NACH_ANLEGEN) === "live")
+        entwurf = { ...entwurf, name: "Unsere Runde" };
+    vorbelegt = true;
     const aendern = (teil) => { entwurf = { ...entwurf, ...teil }; app.zeichne(); };
     const hinzufuegen = () => {
         const name = entwurf.eingabe.trim();
@@ -30,6 +34,7 @@ export function rundeNeu(app) {
                 return;
         }
         entwurf = { name: "", spieler: [], eingabe: "" };
+        vorbelegt = false;
         // Spec 016: Kam man über „Live spielen“, geht es an den Tisch; die Absicht geht nicht verloren.
         const live = leseLokal(NACH_ANLEGEN) === "live";
         schreibeLokal(NACH_ANLEGEN, null);
@@ -46,7 +51,7 @@ export function rundeNeu(app) {
                 document.getElementById("neuer-spieler")?.focus();
             }
         },
-    })), h("div", { class: "gruppe" }, h("div", { class: "zeile" }, h("label", { for: "neuer-spieler", style: "flex-grow: 1" }, "Spieler"), h("span", { class: "leise", style: `color: var(${anzahl >= 4 ? "--accent" : "--warning"})` }, anzahl >= 4 ? `${anzahl} Spieler` : leseLokal(NACH_ANLEGEN) === "live" ? (anzahl === 0 ? "Trag mindestens dich selbst ein" : "Fehlende Plätze kann die KI übernehmen") : `noch ${4 - anzahl} bis zum ersten Abend`)), anzahl > 0
+    })), h("div", { class: "gruppe" }, h("div", { class: "zeile" }, h("label", { for: "neuer-spieler", style: "flex-grow: 1" }, "Spieler"), h("span", { class: "leise", style: `color: var(${anzahl >= 4 ? "--accent" : "--warning"})` }, anzahl >= 4 ? `${anzahl} Spieler` : leseLokal(NACH_ANLEGEN) === "live" ? (anzahl === 0 ? "Trag dich ein. Die anderen tragen sich beim Beitreten selbst ein, oder du trägst sie hier schon ein." : "Die anderen tragen sich beim Beitreten selbst ein. Fehlende Plätze kann auch die KI übernehmen.") : `noch ${4 - anzahl} bis zum ersten Abend`)), anzahl > 0
         ? h("div", { class: "chips", "aria-label": "Spieler der neuen Runde" }, entwurf.spieler.map((name, i) => h("span", { class: `chip${name === entwurf.zuletzt && i === anzahl - 1 ? " neu-dazu" : ""}` }, name, h("button", {
             class: "weg", type: "button", "aria-label": `${name} entfernen`,
             onclick: () => aendern({ spieler: entwurf.spieler.filter((_, j) => j !== i), zuletzt: "" }),

@@ -26,6 +26,13 @@ async function los() {
         standalone: navigator.standalone === true,
         displayModeStandalone: matchMedia("(display-mode: standalone)").matches,
     });
+    // Spec 017: Installieren als App anbieten, wenn der Browser es kann (Android/Chrome).
+    // Erst neu zeichnen, wenn die App schon gezeichnet hat: Sonst wäre die erste Ansicht vor dem Laden verbraucht, und ein
+    // offener Abend öffnete sich nur manchmal (Tester 2026-11-08).
+    addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); app.installAngebot = e; if (!app.ersteAnsicht)
+        app.zeichne(); });
+    addEventListener("appinstalled", () => { app.installAngebot = null; if (!app.ersteAnsicht)
+        app.zeichne(); });
     await speicher.setzeEinstellung("persistenz", await bittePersistenz(navigator.storage));
     await ladeKartensaetze(speicher);
     await ladeOffenenTisch(app);

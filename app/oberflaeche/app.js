@@ -17,6 +17,8 @@ export class App {
     ausstehend = null;
     updateBereit = null;
     hinweisHomeBildschirm = false;
+    /** Spec 017: Android/Chrome bietet das Installieren an (`beforeinstallprompt`); null, wenn nicht oder schon installiert. */
+    installAngebot = null;
     meldung = null;
     meldungArt = "fehler";
     /** Nur beim allerersten Zeichnen true: Dann springt der Start direkt in einen offenen Abend. */
@@ -146,6 +148,7 @@ export class App {
         this.zeichne();
     }
     seitenwechsel = false;
+    blattHuelle = null;
     zeigeBlatt(inhalt) {
         this.blatt = inhalt;
         this.zeichne();
@@ -166,9 +169,19 @@ export class App {
         const ansicht = this.routen(teile)(this, teile);
         const knoten = [ansicht];
         if (this.blatt) {
-            knoten.push(h("div", { class: "blatt-hintergrund", onclick: (e) => { if (e.target === e.currentTarget)
-                    this.zeigeBlatt(null); } }, h("div", { class: "blatt", role: "dialog", "aria-modal": "true" }, this.blatt)));
+            // Dieselbe Hülle über das Neuzeichnen hinweg: Sonst startet die Einblend-Animation bei jedem Neuzeichnen neu, und
+            // über einem Tisch, der oft neu zeichnet, bleibt das Blatt halb durchsichtig oder unten aus dem Bild (Spec 017).
+            if (this.blattHuelle?.inhalt !== this.blatt) {
+                this.blattHuelle = {
+                    inhalt: this.blatt,
+                    el: h("div", { class: "blatt-hintergrund", onclick: (e) => { if (e.target === e.currentTarget)
+                            this.zeigeBlatt(null); } }, h("div", { class: "blatt", role: "dialog", "aria-modal": "true" }, this.blatt)),
+                };
+            }
+            knoten.push(this.blattHuelle.el);
         }
+        else
+            this.blattHuelle = null;
         if (this.ausstehend) {
             knoten.push(h("div", { class: "toast", role: "status" }, h("span", { class: "text" }, this.ausstehend.text), h("button", { "data-fokus": "rueckgaengig", onclick: () => this.rueckgaengigKlick() }, "Rückgängig")));
         }

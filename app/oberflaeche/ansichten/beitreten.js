@@ -5,6 +5,7 @@ import { filzkopf, kopf } from "../bausteine.js";
 import { h } from "../dom.js";
 import { qrCode } from "../qr.js";
 import { istRaum } from "../../netz/raum.js";
+import { nameBlatt } from "./spieltisch.js";
 import { beitreten, beitretenUeberRaum, schliesseTisch, tisch, zurueckkehren } from "../tisch.js";
 let auswahl = null;
 let neuerName = "";
@@ -87,28 +88,43 @@ function inhalt(app, t) {
         // Spielt die KI für jemanden (Spec 013), ist sein Platz ebenfalls wählbar: Er übernimmt nach dem laufenden Stich.
         const zurueck = (p) => p.zustand === "weg" || p.ki === "fuer";
         const belegt = new Set(ti.plaetze.filter((p) => !zurueck(p)).map((p) => p.spielerId).filter(Boolean));
-        const weg = new Set(ti.plaetze.filter(zurueck).map((p) => p.spielerId));
-        // Spec 016: Vor dem ersten Live-Spiel des Abends ist, wer fehlt, „noch nicht da“ (wie beim Gastgeber).
-        const fehlt = ti.schonLive === false ? "noch nicht da" : "getrennt";
         const neu = auswahl === "neu";
         const gewaehlt = ti.spieler.find((s) => s.id === auswahl);
-        return h("div", { class: "seite" }, filzkopf("Doppelkopf", `${ti.gastgeberName} lädt dich an den Tisch der ${ti.rundenName} ein.`), c.meldung ? h("p", { class: "hinweis fehler", role: "alert" }, c.meldung) : null, c.hinweis ? h("p", { class: "hinweis info", role: "status" }, c.hinweis) : null, ti.ersatzFuer ? h("p", { class: "hinweis info" }, `Gesucht wird ein Ersatz für Platz ${ti.ersatzFuer}. Wähle dich aus oder lege dich neu an.`) : null, h("section", { class: "gruppe" }, h("h2", { id: "wer-titel" }, "Wer bist du?"), h("div", { class: "raster-2", role: "group", "aria-labelledby": "wer-titel" }, ti.spieler.map((s) => h("button", {
+        return h("div", { class: "seite" }, filzkopf("Doppelkopf", `${ti.gastgeberName} lädt dich an den Tisch der ${ti.rundenName} ein.`), c.meldung ? h("p", { class: "hinweis fehler", role: "alert" }, c.meldung) : null, c.hinweis ? h("p", { class: "hinweis info", role: "status" }, c.hinweis) : null, inAppAnsicht() ? h("div", { class: "hinweis info", role: "note", "data-in-app": "" }, h("span", {}, h("b", {}, "Besser im Browser öffnen. "), "Hier drin reißt die Verbindung ab, sobald du die App wechselst. Über ⋯ oder das Teilen-Symbol „In Safari öffnen“ bzw. „In Chrome öffnen“ wählen.")) : null, ti.ersatzFuer ? h("p", { class: "hinweis info" }, `Gesucht wird ein Ersatz für Platz ${ti.ersatzFuer}. Wähle dich aus oder lege dich neu an.`) : null, h("section", { class: "gruppe" }, h("h2", { id: "wer-titel" }, "Wer bist du?"), h("div", { class: "raster-2", role: "group", "aria-labelledby": "wer-titel" }, ti.spieler.map((s) => h("button", {
             class: "wahl", "aria-pressed": String(auswahl === s.id), disabled: belegt.has(s.id), "data-fokus": `wer-${s.id}`,
             onclick: () => { auswahl = s.id; app.zeichne(); },
-        }, s.name, belegt.has(s.id) || weg.has(s.id) ? h("span", { class: "zusatz" }, belegt.has(s.id) ? "sitzt schon" : fehlt) : null)), h("button", { class: "wahl neu", "aria-pressed": String(neu), "data-fokus": "wer-neu", onclick: () => { auswahl = "neu"; app.zeichne(); } }, "Neu am Tisch")), neu ? [
+        }, s.name, belegt.has(s.id) ? h("span", { class: "zusatz" }, "sitzt schon") : null)), h("button", { class: "wahl neu", "aria-pressed": String(neu), "data-fokus": "wer-neu", onclick: () => { auswahl = "neu"; app.zeichne(); } }, "Mein Name fehlt")), neu ? [
             h("label", { for: "neuer-name" }, "Dein Name am Tisch"),
-            h("input", { id: "neuer-name", type: "text", maxlength: 24, value: neuerName, placeholder: "z. B. Jonas", "data-fokus": "neuer-name", oninput: (e) => { neuerName = e.target.value; } }),
+            h("input", { id: "neuer-name", type: "text", maxlength: 24, value: neuerName, placeholder: "z. B. Jonas", "data-fokus": "neuer-name", oninput: (e) => {
+                    neuerName = e.target.value;
+                    const knopf = document.querySelector('[data-fokus="platz-nehmen"]');
+                    if (knopf) {
+                        knopf.disabled = !neuerName.trim();
+                        knopf.textContent = neuerName.trim() ? `Als ${neuerName.trim()} Platz nehmen` : "Namen eingeben";
+                    }
+                } }),
         ] : null), h("div", { class: "dehnen" }), h("button", {
             class: "knopf haupt", disabled: !gewaehlt && !(neu && neuerName.trim()), "data-fokus": "platz-nehmen",
             onclick: () => { if (neu)
                 c.neuAmTisch(neuerName);
             else if (gewaehlt)
                 c.waehle(gewaehlt.id); },
-        }, neu ? "Profil anlegen und Platz nehmen" : gewaehlt ? `Als ${gewaehlt.name} Platz nehmen` : "Wähle dich aus"), h("p", { class: "leise", style: "margin: 0" }, "Kein Konto, keine E-Mail. Dieses Gerät merkt sich deinen Platz an diesem Tisch."));
+        }, neu ? (neuerName.trim() ? `Als ${neuerName.trim()} Platz nehmen` : "Namen eingeben") : gewaehlt ? `Als ${gewaehlt.name} Platz nehmen` : "Wähle dich aus"), h("p", { class: "leise", style: "margin: 0" }, "Kein Konto, keine E-Mail. Dieses Gerät merkt sich deinen Platz an diesem Tisch."), nichtMitspielen(app, c));
     }
     // ---------- Lobby ----------
     const ab = abweichungenVonDdv(ti.profil);
-    return h("div", { class: "seite" }, filzkopf(`${ti.gastgeberName}s Tisch`, c.verbunden ? "direkt verbunden" : "Verbindung weg"), h("section", { class: "plaetze", "aria-label": "Plätze am Tisch" }, ti.plaetze.map((p) => h("div", { class: "platz-zeile", "data-platz": p.platz }, h("span", { class: "platz-nr" }, String(p.platz)), h("span", { class: "platz-name" }, p.name ?? "Platz frei", p.platz === c.platz ? h("span", { class: "leise" }, " · du") : null), h("span", { class: `platz-status ${p.verbunden ? "ok" : ""}` }, p.spielerId ? (p.verbunden ? "da" : ti.schonLive === false ? "noch nicht da" : "getrennt") : "frei")))), h("p", {}, `${ti.gastgeberName} startet, sobald alle vier sitzen. Gespielt wird im Uhrzeigersinn.`), h("section", { class: "karte" }, h("strong", {}, `Regeln: ${ti.profil.name}`), ab.length === 0 ? h("p", { class: "leise", style: "margin: 0" }, "genau nach DDV-Turnierregeln")
-        : h("ul", { style: "margin: 0; padding-left: 18px" }, ab.map((a) => h("li", {}, a)))), h("p", { class: "leise" }, "Jetzt schon quer halten, dann geht es gleich los."));
+    return h("div", { class: "seite" }, filzkopf(`${ti.gastgeberName}s Tisch`, c.verbunden ? "direkt verbunden" : "Verbindung weg"), h("section", { class: "plaetze", "aria-label": "Plätze am Tisch" }, ti.plaetze.map((p) => h("div", { class: "platz-zeile", "data-platz": p.platz }, h("span", { class: "platz-nr" }, String(p.platz)), h("span", { class: "platz-name" }, p.name ?? "Platz frei", p.platz === c.platz ? h("span", { class: "leise" }, " · du") : null), p.platz === c.platz ? h("button", { class: "knopf text", "data-fokus": "name-aendern", onclick: () => app.zeigeBlatt(nameBlatt(app, c, p.name ?? "")) }, "Name ändern") : null, h("span", { class: `platz-status ${p.verbunden ? "ok" : ""}` }, p.spielerId ? (p.verbunden ? "da" : ti.schonLive === false ? "noch nicht da" : "getrennt") : "frei")))), h("p", {}, `${ti.gastgeberName} startet, sobald alle vier sitzen. Gespielt wird im Uhrzeigersinn.`), h("section", { class: "karte" }, h("strong", {}, `Regeln: ${ti.profil.name}`), ab.length === 0 ? h("p", { class: "leise", style: "margin: 0" }, "genau nach DDV-Turnierregeln")
+        : h("ul", { style: "margin: 0; padding-left: 18px" }, ab.map((a) => h("li", {}, a)))), h("p", { class: "leise" }, "Jetzt schon quer halten, dann geht es gleich los."), nichtMitspielen(app, c));
+}
+/**
+ * Spec 017: Läuft die Seite in einer App-internen Ansicht (Link aus WhatsApp, Instagram, Facebook …)? Dort trennt der
+ * Wechsel in eine andere App die Verbindung, und Wiederverbinden klappt schlechter.
+ */
+export function inAppAnsicht(ua = navigator.userAgent) {
+    return /WhatsApp|FBAN|FBAV|FB_IAB|Instagram|Line\/|Snapchat|; wv\)/.test(ua);
+}
+/** Spec 017: Ausweg für Gäste vor dem Spiel (falscher Link, will doch nicht mitspielen). */
+function nichtMitspielen(app, c) {
+    return h("button", { class: "knopf text", "data-fokus": "nicht-mitspielen", onclick: async () => { c.trennen(); await schliesseTisch(app); app.geheZu("/"); } }, "Nicht mitspielen");
 }
 //# sourceMappingURL=beitreten.js.map

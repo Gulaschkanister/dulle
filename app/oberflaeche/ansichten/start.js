@@ -1,6 +1,7 @@
 // Start: offener Abend → direkt zum Spielblock, sonst die Runden. Dazu die Einstiege ins Live-Spiel (Spec 010, Ergänzung)
 // und „Gegen die KI üben“ (Spec 016).
-import { filzkopf, homeHinweis, meldung } from "../bausteine.js";
+import { filzkopf, homeHinweis, installHinweis, kurzanleitung, meldung } from "../bausteine.js";
+import { abendBeginnenBlatt } from "./runde.js";
 import { h } from "../dom.js";
 import { ladenKnopf } from "../sicherung.js";
 import { leseLokal, schreibeLokal } from "../app.js";
@@ -16,15 +17,28 @@ export function start(app) {
     }
     const runden = Object.values(app.sicht).sort((a, b) => a.name.localeCompare(b.name, "de"));
     const echte = runden.filter((r) => r.id !== leseLokal("dulle.uebenRunde"));
-    return h("div", { class: "seite" }, filzkopf("Dulle", "Doppelkopf mitschreiben und live spielen", { motiv: true, aktionen: h("a", { class: "knopf", href: "#/einstellungen", "data-fokus": "einstellungen" }, "Einstellungen") }), homeHinweis(app), meldung(app), tischHinweis(app), h("div", { class: "raster-2", role: "group", "aria-label": "Spielen" }, h("button", { class: "knopf", "data-fokus": "live-spielen", onclick: () => liveSpielen(app, echte) }, "Live spielen"), h("button", {
+    return h("div", { class: "seite" }, filzkopf("Dulle", "Doppelkopf mitschreiben und live spielen", { motiv: true, aktionen: h("a", { class: "knopf", href: "#/einstellungen", "data-fokus": "einstellungen" }, "Einstellungen") }), homeHinweis(app), installHinweis(app), meldung(app), tischHinweis(app), h("div", { class: "raster-2", role: "group", "aria-label": "Spielen" }, h("button", { class: "knopf", "data-fokus": "live-spielen", onclick: () => liveSpielen(app, echte) }, "Live spielen"), h("button", {
         class: "knopf", "data-fokus": "ueben",
         onclick: async () => { const f = await ueben(app); if (f)
             app.melde(f);
         else
             app.geheZu("/tisch"); },
-    }, "Gegen die KI üben"), h("button", { class: "knopf", style: "grid-column: 1 / -1", "data-fokus": "einladung-oeffnen", onclick: () => app.zeigeBlatt(einladungBlatt(app)) }, "Einladung öffnen")), runden.length === 0
+    }, "Gegen die KI üben"), h("button", { class: "knopf", style: "grid-column: 1 / -1", "data-fokus": "einladung-oeffnen", onclick: () => app.zeigeBlatt(einladungBlatt(app)) }, "Einladung öffnen")), kurzanleitung(!echte.some((r) => Object.keys(r.sitzungen).length > 0)), echte.length === 0
         ? h("p", { class: "leer" }, "Für eure Runde: zuerst unten anlegen, zum Beispiel „Donnerstagsrunde“. Üben geht auch ohne.")
-        : h("nav", { class: "liste", "aria-label": "Runden" }, runden.map((r) => h("a", { href: `#/runde/${r.id}` }, h("span", { style: "flex-grow: 1; font-weight: 600" }, r.name), h("span", { class: "leise" }, `${Object.values(r.spieler).filter((s) => !s.ausgeblendet).length} Spieler`)))), ladenKnopf(app, "Runde aus Datei laden", "knopf text"), h("div", { class: "dehnen" }), h("a", { class: "knopf haupt", href: "#/runde-neu", "data-fokus": "runde-anlegen" }, "Runde anlegen"));
+        : h("nav", { class: "liste", "aria-label": "Runden" }, echte.map((r) => h("a", { href: `#/runde/${r.id}` }, h("span", { style: "flex-grow: 1; font-weight: 600" }, r.name), h("span", { class: "leise" }, `${Object.values(r.spieler).filter((s) => !s.ausgeblendet).length} Spieler`)))), ladenKnopf(app, "Runde aus Datei laden", "knopf text"), h("div", { class: "dehnen" }), echte.length === 0
+        ? h("a", { class: "knopf haupt", href: "#/runde-neu", "data-fokus": "runde-anlegen" }, "Runde anlegen")
+        : [h("button", { class: "knopf haupt", "data-fokus": "abend-beginnen", "aria-haspopup": "dialog", onclick: () => abendBeginnen(app, echte) }, "Abend beginnen"),
+            h("a", { class: "knopf text", href: "#/runde-neu", "data-fokus": "runde-anlegen" }, "Neue Runde anlegen")]);
+}
+/** Spec 017: Hauptweg mit vorhandener Runde. Eine Runde → „Wie spielt ihr?“, mehrere → zuerst die Runde wählen. */
+function abendBeginnen(app, runden) {
+    // Zuletzt genutzte Runde zuerst (jüngster Abend).
+    const zuletzt = (r) => Object.values(r.sitzungen).reduce((m, s) => (s.datum > m ? s.datum : m), "");
+    const sortiert = [...runden].sort((a, b) => zuletzt(b).localeCompare(zuletzt(a)));
+    const waehlen = () => app.zeigeBlatt(h("div", { class: "gruppe" }, h("h2", { id: "abend-runde-titel" }, "Mit welcher Runde?"), h("nav", { class: "liste", "aria-labelledby": "abend-runde-titel" }, sortiert.map((r) => h("a", {
+        href: "#/", onclick: (e) => { e.preventDefault(); app.zeigeBlatt(abendBeginnenBlatt(app, r.id)); },
+    }, h("span", { style: "flex-grow: 1; font-weight: 600" }, r.name)))), h("button", { class: "knopf text", onclick: () => app.zeigeBlatt(null) }, "Abbrechen")));
+    app.zeigeBlatt(abendBeginnenBlatt(app, sortiert[0].id, sortiert.length > 1 ? waehlen : undefined));
 }
 /** Live spielen: eine Runde → direkt zum Tisch eröffnen; mehrere → erst die Runde wählen; keine → erst anlegen. */
 function liveSpielen(app, runden) {

@@ -59,6 +59,8 @@ export class Gastgeber {
     eintragVon = null;
     /** Zuletzt verschickt: ob Eintragen geht. Ändert es sich (Spiel beginnt oder endet), bekommen alle die Tisch-Info. */
     eintragenGemeldet = null;
+    /** Spec 017: zuletzt gesendeter Stand des Abends; ändert er sich (Spielende), geht die Tisch-Info neu raus. */
+    standGemeldet = "";
     /** Für die Oberfläche des Gastgebers: wird nach jeder Änderung aufgerufen. */
     beiAenderung = null;
     /**
@@ -316,7 +318,25 @@ export class Gastgeber {
             eintragenMoeglich: this.eintragenMoeglich(),
             schreiberWeiter: this.z.schreiberWeiter ?? false,
             schonLive: this.schonLive(),
+            stand: this.stand(),
         };
+    }
+    /** Spec 017: Summen und Zahl der Spiele des Abends (wie im Spielblock). */
+    stand() {
+        const sitzung = this.sitzung();
+        return sitzung ? { summen: { ...sitzung.summen }, spiele: sitzung.spiele.length } : null;
+    }
+    /**
+     * Spec 017: Der Gastgeber beendet den Abend für alle. Wie die gemeinsame Wahl „Abend beenden“ (Spec 012): Alle sehen
+     * „Abend beendet“, das laufende Spiel zählt nicht, der Abend bleibt bis zur Abrechnung offen.
+     */
+    async beendeAbend() {
+        if (!this.z.sitzungId || this.z.beendet)
+            return;
+        this.z.beendet = true;
+        this.eintragVon = null;
+        await this.merke();
+        this.anAlleTisch();
     }
     /** Spec 016: Lief an diesem Abend schon ein Spiel am Tisch? Ohne Abend: ja (dann gibt es nichts „noch nicht da“). */
     schonLive() {
@@ -422,14 +442,24 @@ export class Gastgeber {
     uebergib(an) {
         if (an === this.z.eigenerPlatz || !this.bestaetigt.has(an))
             return "Dieses Gerät ist gerade nicht verbunden.";
+        if (this.z.plaetze[an - 1]?.ki || this.kis.has(an))
+            return "An eine KI lässt sich der Tisch nicht übergeben.";
         if (this.z.spiel && this.z.spiel.phase !== "ende")
             return "Übergeben geht nur zwischen zwei Spielen.";
         this.sende(an, { t: "uebergabe", zustand: structuredClone(this.z) });
         this.abgegeben = true;
         return null;
     }
-    /** Alle Verbindungen schließen (nach der Übergabe; die anderen kommen per Einladung zum neuen Gastgeber). */
+    /**
+     * Spec 017 (Prüfer): Ab jetzt nimmt dieser Gastgeber nichts mehr an, schreibt keine Ereignisse und merkt sich nichts.
+     * Sonst schrieben die gleich schließenden Kanäle `spielerGetrennt` und speicherten den Tisch wieder als offen.
+     */
+    stilllegen() {
+        this.abgegeben = true;
+    }
+    /** Alle Verbindungen schließen (nach Übergabe oder Ende); legt den Gastgeber dabei still. */
     schliesseAlle() {
+        this.abgegeben = true;
         for (const p of [...this.kis.keys()])
             this.kiAbmelden(p);
         for (const k of [...this.kanaele.values()])
@@ -606,6 +636,8 @@ export class Gastgeber {
         }
         if (n.t === "eintragen")
             return this.trageEin(platz, n);
+        if (n.t === "umbenennen")
+            return this.benenneUm(platz, n.name);
         // Abgleich erst, wenn der Platz bestätigt ist (Spec 030).
         if (n.t === "ergaenzung")
             return this.ergaenze(platz, n.ereignisse);
@@ -671,6 +703,21 @@ export class Gastgeber {
             }
             await this.nachZug();
         }
+    }
+    /** Spec 017: Jeder ändert nur seinen eigenen Namen; der Gastgeber schreibt `spielerUmbenannt`. */
+    async benenneUm(platz, roh) {
+        const sitz = this.z.plaetze[platz - 1];
+        const name = typeof roh === "string" ? roh.trim() : "";
+        if (!sitz.spielerId || sitz.ki)
+            return;
+        if (!name || name.length > 24)
+            return this.sende(platz, { t: "abgelehnt", grund: "Bitte einen Namen mit 1 bis 24 Zeichen." });
+        if (this.runde()?.spieler[sitz.spielerId]?.name === name)
+            return;
+        if (!await this.erzeuge("spielerUmbenannt", { spielerId: sitz.spielerId, name }, null))
+            return this.sende(platz, { t: "abgelehnt", grund: "Der Name konnte nicht gespeichert werden." });
+        this.sende(platz, { t: "hinweis", text: `Du heißt jetzt ${name}.` });
+        this.anAlleTisch();
     }
     /** Wahl auf „Wer bist du?“: freier Platz, Gerätewechsel (Stufe 4), Ersatz oder Rückkehr nach Übernahme. */
     async waehlePlatz(kanal, platz, n) {
@@ -804,7 +851,7 @@ export class Gastgeber {
         await this.merke();
         for (const p of PLAETZE)
             this.sendeSicht(p);
-        if (this.eintragenMoeglich() !== this.eintragenGemeldet)
+        if (this.eintragenMoeglich() !== this.eintragenGemeldet || JSON.stringify(this.stand()) !== this.standGemeldet)
             this.anAlleTisch();
         // Nach Spielende (netz-sicherheit, Regel 8) bekommen alle die vollständigen Ereignisse der Runde.
         if (this.z.spiel?.phase === "ende")
@@ -908,6 +955,7 @@ export class Gastgeber {
     }
     anAlleTisch() {
         this.eintragenGemeldet = this.eintragenMoeglich();
+        this.standGemeldet = JSON.stringify(this.stand());
         for (const p of PLAETZE)
             this.sende(p, { t: "tisch", tisch: this.tischInfo(p) });
         // Wer auf Bestätigung wartet, sieht den Tisch ebenfalls (ohne Platz und ohne Karten).
@@ -924,6 +972,8 @@ export class Gastgeber {
         this.sende(platz, { t: "sicht", seq, sicht: sichtFuer(s, platz) });
     }
     async merke() {
+        if (this.abgegeben)
+            return;
         await this.o.merke(structuredClone(this.z));
     }
     geaendert() {

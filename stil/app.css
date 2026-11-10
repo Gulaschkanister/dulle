@@ -179,6 +179,17 @@ textarea { padding: var(--s2) var(--s3); }
 
 /* Blatt (Overlay von unten) */
 .blatt-hintergrund { position: fixed; inset: 0; background: rgb(0 0 0 / .4); display: flex; align-items: flex-end; justify-content: center; z-index: 10; }
+/* Spec 017: Kurzanleitung „So geht ein Abend“. */
+.kurzanleitung { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: var(--s3) var(--s4); }
+/* Ohne display: flex, sonst verschwindet der Aufklapp-Pfeil (Designer). */
+.kurzanleitung summary { font-weight: 600; cursor: pointer; padding: var(--s1) 0; }
+.kurzanleitung ol { margin: var(--s2) 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: var(--s1); }
+/* Spec 017: Kopf eines Blatts mit „Schließen“ oben, damit es auch quer (wenig Höhe) sichtbar bleibt. */
+.blatt-kopf { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); }
+.blatt-kopf h2 { margin: 0; }
+.stand-liste { display: flex; flex-direction: column; gap: var(--s2); }
+.stand-zeile { display: flex; justify-content: space-between; font-size: var(--size-body); }
+.verteilung .gesamt { display: block; font-size: 13px; color: var(--ink-muted); }
 .blatt { animation: hochfahren var(--motion-base) var(--ease-out); width: 100%; max-width: 480px; background: var(--surface); border-radius: var(--r-lg) var(--r-lg) 0 0; padding: var(--s5) var(--s5) calc(var(--s5) + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: var(--s3); max-height: 90dvh; overflow-y: auto; }
 
 /* Rückgängig-Hinweis */
@@ -349,9 +360,12 @@ button.spielkarte:focus-visible { outline: 2px solid #F2C14E; outline-offset: 2p
 
 /* Tisch eröffnen und Beitreten (Spec 010) */
 .plaetze { display: flex; flex-direction: column; }
-.platz-zeile { display: flex; align-items: center; gap: var(--s3); min-height: 52px; border-bottom: 1px solid var(--line); }
+.platz-zeile { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); min-height: 52px; padding: var(--s2) 0; border-bottom: 1px solid var(--line); }
 .platz-nr { width: 18px; font-family: var(--family-mono); color: var(--ink-muted); }
-.platz-name { flex-grow: 1; min-width: 0; font-weight: var(--weight-strong); overflow-wrap: anywhere; }
+.platz-name { flex: 1 1 6em; min-width: 6em; font-weight: var(--weight-strong); overflow-wrap: anywhere; }
+/* Spec 017: Knöpfe einer Platzzeile zusammen; passen sie nicht neben den Namen, stehen sie rechtsbündig darunter. */
+.platz-aktionen { display: flex; gap: var(--s2); margin-left: auto; }
+.platz-aktionen:empty { display: none; }
 .platz-status { color: var(--ink-muted); font-size: var(--size-small); white-space: nowrap; flex-shrink: 0; }
 .platz-status::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--warning); }
 .platz-status.ok::before { background: var(--accent); }

@@ -38,10 +38,12 @@ function qrPlatzhalter(text, beschriftung) {
     return platz;
 }
 /** Spec 030: ein Link für den ganzen Tisch, Raum-ID und Passwort nur im `#fragment`. */
-function linkKarte(app) {
+function linkKarte(app, hauptsache) {
     const link = tischLink() ?? "";
     const offen = raumOffen();
-    return h("section", { class: "karte einladung", "aria-label": "Einladungslink" }, h("strong", {}, "Ein Link für alle"), h("textarea", { readonly: true, rows: 3, id: "tisch-link", "aria-label": "Einladungslink" }, link), h("button", { class: "knopf", "data-fokus": "link-teilen", onclick: () => void teileLink(app, link) }, "Link teilen"), h("p", { class: "leise", style: "margin: 0", role: "status", "data-raum": offen ? "offen" : "zu" }, offen ? "Wer den Link antippt, kommt direkt an den Tisch. Der Link ist nur für eure Runde: Wer ihn hat, kann sich dazusetzen."
+    // Spec 017: Der Link als QR-Code: Am Tisch scannt jeder ihn einmal mit der Kamera, ohne Antwort-Code zurück.
+    return h("section", { class: "karte einladung", "aria-label": "Einladungslink" }, h("strong", {}, "Ein Link für alle"), h("button", { class: hauptsache ? "knopf haupt" : "knopf", "data-fokus": "link-teilen", onclick: () => void teileLink(app, link) }, "Link teilen"), offen && link ? [qrPlatzhalter(link, "QR-Code mit dem Einladungslink"),
+        h("p", { class: "leise", style: "margin: 0; text-align: center" }, "Am Tisch: mit der Kamera scannen, fertig.")] : null, h("details", {}, h("summary", {}, "Link als Text"), h("textarea", { readonly: true, rows: 3, id: "tisch-link", "aria-label": "Einladungslink" }, link)), h("p", { class: "leise", style: "margin: 0", role: "status", "data-raum": offen ? "offen" : "zu" }, offen ? "Wer den Link antippt, kommt direkt an den Tisch. Der Link ist nur für eure Runde: Wer ihn hat, kann sich dazusetzen."
         : navigator.onLine ? "Der Tisch wird im Internet erreichbar gemacht …" : "Ohne Internet geht nur der QR-Code."));
 }
 /** Spec 016: Was fehlt bis zum Start, statt nur „Starten, sobald alle vier sitzen“. */
@@ -68,7 +70,7 @@ export function tischEroeffnen(app, teile) {
         return h("div", { class: "seite" }, filzkopf("Live spielen", `${r.name} · Spiel ${abend.naechsteNr} wird ausgeteilt`, { rechts: h("a", { class: "knopf", href: `#/abend/${abend.id}` }, "Abbrechen") }), meldung(app), h("section", { class: "gruppe" }, h("h2", { id: "ich-titel" }, "Wer bist du?"), h("div", { class: "raster-2", role: "group", "aria-labelledby": "ich-titel" }, menschen.map((id) => h("button", {
             class: "wahl", "aria-pressed": String(id === ich), "data-fokus": `ich-${id}`,
             onclick: () => { schreibeLokal(ICH(r.id), id); app.zeichne(); },
-        }, spielerName(r, id))))), h("div", { class: "karte" }, h("div", { style: "font-weight: 600" }, `Regeln: ${abend.profil.name}`), h("div", { class: "leise" }, "Wie bisher an diesem Abend. Die Plätze bleiben, wie sie sind.")), h("p", { class: "leise", style: "margin: 0" }, "Danach lädst du die anderen ein: per QR-Code am Tisch oder per Link über das Internet."), h("div", { class: "dehnen" }), h("button", {
+        }, spielerName(r, id))))), h("div", { class: "karte" }, h("div", { style: "font-weight: 600" }, `Regeln: ${abend.profil.name}`), h("div", { class: "leise" }, "Wie bisher an diesem Abend. Die Plätze bleiben, wie sie sind.")), h("p", { class: "leise", style: "margin: 0" }, "Danach lädst du die anderen ein: per Link (auch als QR-Code zum Scannen) oder ohne Internet per QR-Tausch."), h("div", { class: "dehnen" }), h("button", {
             class: "knopf haupt", disabled: !ich, "data-fokus": "eroeffnen",
             onclick: async () => { const f2 = await eroeffneFuerAbend(app, abend.id, ich); if (f2)
                 app.melde(f2); app.zeichne(); },
@@ -87,7 +89,7 @@ export function tischEroeffnen(app, teile) {
         }, s.name)))), h("div", { class: "karte zeile" }, h("div", { style: "flex-grow: 1" }, h("div", { style: "font-weight: 600" }, `Regeln: ${profil.name}`), h("div", { class: "leise" }, abweichungenText(profil))), h("button", {
             class: "knopf",
             onclick: () => app.zeigeBlatt(regelnWahlBlatt(app, r, profil, "Regeln für diesen Tisch", (p) => { profilWahl = { rundeId: r.id, profil: p }; app.zeigeBlatt(null); })),
-        }, "Ändern")), h("p", { class: "leise", style: "margin: 0" }, "Danach lädst du ein: per QR-Code am Tisch (ohne Internet, im selben WLAN) oder per Link über das Internet."), h("div", { class: "dehnen" }), h("button", {
+        }, "Ändern")), h("p", { class: "leise", style: "margin: 0" }, "Danach lädst du ein: per Link (auch als QR-Code zum Scannen) oder ohne Internet per QR-Tausch im selben WLAN."), h("div", { class: "dehnen" }), h("button", {
             class: "knopf haupt", disabled: !ich || !r.spieler[ich], "data-fokus": "eroeffnen",
             onclick: async () => { merkeProfil(r.id, profil); await eroeffne(app, r.id, profil, ich); app.zeichne(); },
         }, "Tisch eröffnen"));
@@ -95,7 +97,9 @@ export function tischEroeffnen(app, teile) {
     // ---------- Schritt 2: Plätze und Einladungen ----------
     const g = t.gastgeber;
     const z = g.zustand;
-    const weg = leseLokal(WEG) === "link" ? "link" : "qr";
+    // Spec 017: Mit Internet ist der Link der einfachste Weg; der QR-Tausch bleibt für „ohne Internet“.
+    const gemerkterWeg = leseLokal(WEG);
+    const weg = gemerkterWeg === "link" || gemerkterWeg === "qr" ? gemerkterWeg : navigator.onLine ? "link" : "qr";
     const name = (id) => (id ? spielerName(r, id) : null);
     const laeuft = g.sitzungId !== null;
     const bereit = g.alleSitzen() && PLAETZE.every((p) => p === z.eigenerPlatz || g.verbunden(p));
@@ -119,11 +123,13 @@ export function tischEroeffnen(app, teile) {
         const status = ich ? "du" : ki === "platz" ? "KI" : ki === "fuer" ? "KI spielt" : verbunden && sitz.spielerId && !info.plaetze[p - 1].zurueckgeholt ? "verbunden" : verbunden ? "wählt sich aus" : e?.annehmen ? "wartet auf Antwort"
             : ersatz ? "Ersatz gesucht" : kommt ? "kommt über das Internet zurück …" : sitz.spielerId && !schonLive ? "noch nicht da" : sitz.spielerId ? `weg · ${seit(info.plaetze[p - 1].wegSeit)}` : "frei";
         const knopf = ersatz ? "Ersatz einladen" : sitz.spielerId && laeuft && schonLive ? `${name(sitz.spielerId)} zurückholen` : sitz.spielerId && laeuft ? `${name(sitz.spielerId)} einladen` : sitz.spielerId ? "Neu einladen" : "Einladen";
-        return h("div", { class: "platz-zeile", "data-platz": p, "data-status": status.startsWith("weg") || kommt || status === "noch nicht da" ? "weg" : status }, h("span", { class: "platz-nr" }, String(p)), h("span", { class: "platz-name" }, name(sitz.spielerId) ?? "Platz frei"), h("span", { class: `platz-status ${verbunden ? "ok" : ""}` }, status), weg === "qr" && !ich && !kommt && (!verbunden || ki === "fuer") ? h("button", { class: "knopf", "data-fokus": `einladen-${p}`, onclick: () => void einladen(app, p) }, knopf) : null, 
+        return h("div", { class: "platz-zeile", "data-platz": p, "data-status": status.startsWith("weg") || kommt || status === "noch nicht da" ? "weg" : status }, h("span", { class: "platz-nr" }, String(p)), h("span", { class: "platz-name" }, name(sitz.spielerId) ?? "Platz frei"), h("span", { class: `platz-status ${verbunden ? "ok" : ""}` }, status), 
+        // Spec 017: Knöpfe gemeinsam; wird es eng, brechen sie unter den Namen um (statt „Platz frei“ zu zerquetschen).
+        h("span", { class: "platz-aktionen" }, weg === "qr" && !ich && !kommt && (!verbunden || ki === "fuer") ? h("button", { class: "knopf", "data-fokus": `einladen-${p}`, onclick: () => void einladen(app, p) }, knopf) : null, 
         // Spec 013/016: freier Platz vor dem Start mit KI besetzen (bis zu drei), und wieder freigeben.
         !laeuft && !sitz.spielerId
             ? h("button", { class: "knopf", "data-fokus": `ki-${p}`, onclick: () => { const f = g.setzeKi(p); if (f)
-                    app.melde(f); app.zeichne(); } }, "Mit KI besetzen") : null, !laeuft && ki === "platz" ? h("button", { class: "knopf text", "data-fokus": `ki-weg-${p}`, onclick: () => { g.entferneKi(p); app.zeichne(); } }, "KI entfernen") : null);
+                    app.melde(f); app.zeichne(); } }, "Mit KI besetzen") : null, !laeuft && ki === "platz" ? h("button", { class: "knopf text", "data-fokus": `ki-weg-${p}`, onclick: () => { g.entferneKi(p); app.zeichne(); } }, "KI entfernen") : null));
     };
     const einladungKarte = (p) => {
         const e = t.einladungen.get(p);
@@ -150,9 +156,9 @@ export function tischEroeffnen(app, teile) {
     };
     return h("div", { class: "seite" }, filzkopf("Tisch eröffnen", `${r.name} · ${t.gastgeber ? (z.plaetze[z.eigenerPlatz - 1]?.spielerId ? `${name(z.plaetze[z.eigenerPlatz - 1].spielerId)} eröffnet` : "") : ""}`, {
         rechts: h("a", { class: "knopf", href: `#/runde/${r.id}` }, "Zur Runde"),
-    }), meldung(app), h("div", { class: "segment", role: "group", "aria-label": "Einladen" }, [["qr", "Am Tisch (QR)"], ["link", "Per Link (Internet)"]].map(([id, text]) => h("button", {
+    }), meldung(app), h("div", { class: "segment", role: "group", "aria-label": "Einladen" }, [["link", "Per Link (Internet)"], ["qr", "Ohne Internet (QR)"]].map(([id, text]) => h("button", {
         "aria-pressed": String(weg === id), "data-fokus": `weg-${id}`, onclick: () => { schreibeLokal(WEG, id); app.zeichne(); },
-    }, text))), weg === "link" ? linkKarte(app) : null, h("section", { class: "plaetze", "aria-label": "Plätze am Tisch" }, PLAETZE.map(platzZeile)), 
+    }, text))), weg === "link" ? linkKarte(app, !bereit && !laeuft) : null, h("section", { class: "plaetze", "aria-label": "Plätze am Tisch" }, PLAETZE.map(platzZeile)), 
     // Mehrere weg (z. B. nach eigenem Neuladen): alle Einladungen auf einmal, die QR-Codes stehen untereinander.
     wegListe.filter((p) => !t.einladungen.get(p)?.annehmen).length > 1
         ? h("button", { class: "knopf", "data-fokus": "alle-zurueckholen", onclick: () => { for (const p of wegListe)

@@ -50,6 +50,30 @@ export function zaehleHoch(el, von, bis, format) {
     el.textContent = format(von);
     requestAnimationFrame(schritt);
 }
+/** Spec 017: Kurzanleitung „So geht ein Abend“ (Startseite und Einstellungen › Hilfe). */
+export function kurzanleitung(offen) {
+    return h("details", { class: "kurzanleitung", ...(offen ? { open: true } : {}) }, h("summary", { "data-fokus": "kurzanleitung" }, "So geht ein Abend"), h("ol", {}, h("li", {}, h("b", {}, "Runde anlegen"), " (einmal): Name und Spieler."), h("li", {}, h("b", {}, "Abend beginnen"), ", live spielen, Tisch eröffnen und den Link teilen."), h("li", {}, "Die anderen öffnen den Link und wählen sich aus. Gespielt wird reihum."), h("li", {}, h("b", {}, "Aufhören:"), " Menü › Abend beenden. Den Stand gibt es jederzeit unter „Stand“.")));
+}
+const INSTALL_WEG = "dulle.installHinweisWeg";
+/** Spec 017: Positiver Hinweis zum Installieren, wenn der Browser es anbietet, nach dem ersten Abend. */
+export function installHinweis(app) {
+    if (!app.installAngebot || leseLokal(INSTALL_WEG))
+        return null;
+    if (!Object.values(app.sicht).some((r) => Object.keys(r.sitzungen).length > 0))
+        return null;
+    return h("div", { class: "hinweis info", role: "note", "data-install": "" }, h("div", { style: "flex-grow: 1" }, h("b", {}, "Dulle als App auf den Startbildschirm. "), "Startet schneller und läuft ohne Internet."), h("button", { class: "knopf", "data-fokus": "installieren", onclick: () => void installieren(app) }, "Installieren"), h("button", { class: "knopf text leise", "data-fokus": "install-weg", onclick: () => { schreibeLokal(INSTALL_WEG, true); app.zeichne(); } }, "Später"));
+}
+export async function installieren(app) {
+    const angebot = app.installAngebot;
+    if (!angebot)
+        return;
+    app.installAngebot = null;
+    try {
+        await angebot.prompt();
+    }
+    catch { /* abgelehnt oder nicht mehr möglich */ }
+    app.zeichne();
+}
 /** Hinweis gegen die 7-Tage-Löschung in Safari. Bleibt, bis die App vom Home-Bildschirm läuft; einklappbar. */
 export function homeHinweis(app) {
     if (!app.hinweisHomeBildschirm)
@@ -136,7 +160,7 @@ export function spielerAnlegenBlatt(app, runde, nachher) {
     return h("form", { class: "gruppe", onsubmit: (e) => { e.preventDefault(); anlegen(); } }, h("h2", {}, "Spieler anlegen"), h("label", { for: "spielername" }, "Name, dann Enter für den Nächsten"), h("div", { class: "zeile" }, feld, h("button", { type: "submit", class: "knopf", style: "flex: none" }, "Hinzufügen")), hinweis, liste, h("button", { type: "button", class: "knopf haupt", "data-fokus": "spieler-fertig", onclick: () => app.zeigeBlatt(null) }, "Fertig"));
 }
 /** Blatt für einen vorhandenen Spieler: umbenennen, aus- oder einblenden. */
-export function spielerBlatt(app, runde, spielerId) {
+export function spielerBlatt(app, runde, spielerId, mitStatistik = false) {
     const spieler = runde.spieler[spielerId];
     if (!spieler)
         return h("p", {}, "Diesen Spieler gibt es nicht.");
@@ -148,7 +172,7 @@ export function spielerBlatt(app, runde, spielerId) {
         if (await app.speichere("spielerUmbenannt", { spielerId, name: sauber }, { runde: runde.id }))
             app.zeigeBlatt(null);
     };
-    return h("form", { class: "gruppe", onsubmit: (e) => { e.preventDefault(); void umbenennen(); } }, h("h2", {}, spieler.name), h("label", { for: "spielername" }, "Name"), h("input", { type: "text", id: "spielername", maxlength: 24, value: spieler.name, oninput: (e) => { name = e.target.value; } }), h("button", { type: "submit", class: "knopf haupt" }, "Namen speichern"), h("button", {
+    return h("form", { class: "gruppe", onsubmit: (e) => { e.preventDefault(); void umbenennen(); } }, h("h2", {}, spieler.name), h("label", { for: "spielername" }, "Name"), h("input", { type: "text", id: "spielername", maxlength: 24, value: spieler.name, oninput: (e) => { name = e.target.value; } }), h("button", { type: "submit", class: "knopf haupt" }, "Namen speichern"), mitStatistik ? h("a", { class: "knopf", href: `#/runde/${runde.id}/spieler/${spielerId}`, "data-fokus": "statistik-spieler", onclick: () => app.zeigeBlatt(null) }, "Statistik ansehen") : null, h("button", {
         type: "button", class: "knopf",
         onclick: async () => {
             if (await app.speichere("spielerAusgeblendet", { spielerId, ausgeblendet: !spieler.ausgeblendet }, { runde: runde.id }))
