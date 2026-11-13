@@ -184,6 +184,9 @@ textarea { padding: var(--s2) var(--s3); }
 /* Ohne display: flex, sonst verschwindet der Aufklapp-Pfeil (Designer). */
 .kurzanleitung summary { font-weight: 600; cursor: pointer; padding: var(--s1) 0; }
 .kurzanleitung ol { margin: var(--s2) 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: var(--s1); }
+/* Ausweg im Link-Kasten: Knopf darf unter den Text rutschen, statt den Text in schmale Zeilen zu drücken. */
+[data-link-zaeh] { flex-wrap: wrap; }
+.install-schritte { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: var(--s2); }
 /* Spec 017: Kopf eines Blatts mit „Schließen“ oben, damit es auch quer (wenig Höhe) sichtbar bleibt. */
 .blatt-kopf { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); }
 .blatt-kopf h2 { margin: 0; }

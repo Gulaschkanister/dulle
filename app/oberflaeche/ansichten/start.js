@@ -1,6 +1,6 @@
 // Start: offener Abend → direkt zum Spielblock, sonst die Runden. Dazu die Einstiege ins Live-Spiel (Spec 010, Ergänzung)
 // und „Gegen die KI üben“ (Spec 016).
-import { filzkopf, homeHinweis, installHinweis, kurzanleitung, meldung } from "../bausteine.js";
+import { filzkopf, homeHinweis, installBlatt, installHinweis, kurzanleitung, meldung } from "../bausteine.js";
 import { abendBeginnenBlatt } from "./runde.js";
 import { h } from "../dom.js";
 import { ladenKnopf } from "../sicherung.js";
@@ -25,7 +25,9 @@ export function start(app) {
             app.geheZu("/tisch"); },
     }, "Gegen die KI üben"), h("button", { class: "knopf", style: "grid-column: 1 / -1", "data-fokus": "einladung-oeffnen", onclick: () => app.zeigeBlatt(einladungBlatt(app)) }, "Einladung öffnen")), kurzanleitung(!echte.some((r) => Object.keys(r.sitzungen).length > 0)), echte.length === 0
         ? h("p", { class: "leer" }, "Für eure Runde: zuerst unten anlegen, zum Beispiel „Donnerstagsrunde“. Üben geht auch ohne.")
-        : h("nav", { class: "liste", "aria-label": "Runden" }, echte.map((r) => h("a", { href: `#/runde/${r.id}` }, h("span", { style: "flex-grow: 1; font-weight: 600" }, r.name), h("span", { class: "leise" }, `${Object.values(r.spieler).filter((s) => !s.ausgeblendet).length} Spieler`)))), ladenKnopf(app, "Runde aus Datei laden", "knopf text"), h("div", { class: "dehnen" }), echte.length === 0
+        : h("nav", { class: "liste", "aria-label": "Runden" }, echte.map((r) => h("a", { href: `#/runde/${r.id}` }, h("span", { style: "flex-grow: 1; font-weight: 600" }, r.name), h("span", { class: "leise" }, `${Object.values(r.spieler).filter((s) => !s.ausgeblendet).length} Spieler`)))), ladenKnopf(app, "Runde aus Datei laden", "knopf text"), 
+    // Spec 017 (Live-Test): Installieren immer erreichbar, solange Dulle nicht als App läuft.
+    !app.alsApp ? h("button", { class: "knopf text", "data-fokus": "als-app", "aria-haspopup": "dialog", onclick: () => app.zeigeBlatt(installBlatt(app)) }, "Als App installieren") : null, h("div", { class: "dehnen" }), echte.length === 0
         ? h("a", { class: "knopf haupt", href: "#/runde-neu", "data-fokus": "runde-anlegen" }, "Runde anlegen")
         : [h("button", { class: "knopf haupt", "data-fokus": "abend-beginnen", "aria-haspopup": "dialog", onclick: () => abendBeginnen(app, echte) }, "Abend beginnen"),
             h("a", { class: "knopf text", href: "#/runde-neu", "data-fokus": "runde-anlegen" }, "Neue Runde anlegen")]);
@@ -43,7 +45,7 @@ function abendBeginnen(app, runden) {
 /** Live spielen: eine Runde → direkt zum Tisch eröffnen; mehrere → erst die Runde wählen; keine → erst anlegen. */
 function liveSpielen(app, runden) {
     if (runden.length === 0) {
-        app.melde("Lege zuerst eure Runde mit den Spielern an. Danach geht es direkt an den Tisch.", "info");
+        app.melde("Lege zuerst eure Runde an. Danach geht es direkt an den Tisch.", "info");
         schreibeLokal(NACH_ANLEGEN, "live");
         app.geheZu("/runde-neu");
         return;

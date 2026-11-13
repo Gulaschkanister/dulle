@@ -88,6 +88,12 @@ function starteUhr(app) {
         void t.gastgeber?.tick();
         if (t.rolle === "gastgeber" && !gastgeberRaum)
             void raumOeffnen(app);
+        // Die Einladeseite zeigt, ob der Tisch im Internet erreichbar ist; das ändert sich ohne eigenes Ereignis.
+        if (t.rolle === "gastgeber" && raumOffen() !== zuletztOffen) {
+            zuletztOffen = raumOffen();
+            if (location.hash.includes("/am-handy"))
+                app.zeichne();
+        }
         if (t.rolle === "mitspieler" && t.client && !t.client.verbunden && !t.client.tisch?.schreiberWeiter && !t.client.tisch?.beendet)
             void zurueckUeberRaum(app);
         const ti = t.client?.tisch;
@@ -264,7 +270,9 @@ async function raumOeffnen(app) {
     }
     app.zeichne();
 }
-export function raumOffen() { return raumBereit; }
+/** Spec 017 (Live-Test): offen heißt, im Raum und mit mindestens einem verbundenen Vermittlungsserver. */
+export function raumOffen() { return raumBereit && (gastgeberRaum?.erreichbar?.() ?? true); }
+let zuletztOffen = false;
 /** Link für den ganzen Tisch: Raum-ID und Passwort stehen nur im `#fragment`. */
 export function tischLink() {
     const g = aktiv?.gastgeber;

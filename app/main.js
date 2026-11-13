@@ -20,6 +20,7 @@ async function los() {
         return;
     }
     const app = new App(speicher, await speicher.geraetId(), wurzel, routen);
+    app.alsApp = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
     app.hinweisHomeBildschirm = brauchtHomeBildschirmHinweis({
         userAgent: navigator.userAgent,
         maxTouchPoints: navigator.maxTouchPoints,

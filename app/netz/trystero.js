@@ -72,6 +72,15 @@ export function trysteroVermittlung(o = {}) {
                     f(k); },
                 verlasse: () => { for (const k of [...kanaele.values()])
                     k.schliessen(); void room.leave(); },
+                // Spec 017 (Live-Test): joinRoom kehrt auch ohne erreichbaren Relay zurück; offen heißt erst, wenn einer verbunden ist.
+                erreichbar: () => {
+                    try {
+                        return typeof t.getRelaySockets !== "function" || Object.values(t.getRelaySockets()).some((w) => w?.readyState === 1);
+                    }
+                    catch {
+                        return true;
+                    }
+                },
             };
         },
     };

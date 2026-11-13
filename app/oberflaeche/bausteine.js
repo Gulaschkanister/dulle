@@ -63,6 +63,13 @@ export function installHinweis(app) {
         return null;
     return h("div", { class: "hinweis info", role: "note", "data-install": "" }, h("div", { style: "flex-grow: 1" }, h("b", {}, "Dulle als App auf den Startbildschirm. "), "Startet schneller und läuft ohne Internet."), h("button", { class: "knopf", "data-fokus": "installieren", onclick: () => void installieren(app) }, "Installieren"), h("button", { class: "knopf text leise", "data-fokus": "install-weg", onclick: () => { schreibeLokal(INSTALL_WEG, true); app.zeichne(); } }, "Später"));
 }
+/** Spec 017 (Live-Test): Anleitung zum Installieren für jeden Browser; mit Knopf, wenn der Browser es direkt anbietet. */
+export function installAnleitung(app) {
+    return h("div", { class: "gruppe", "data-install-anleitung": "" }, app.installAngebot ? h("button", { class: "knopf haupt", "data-fokus": "jetzt-installieren", onclick: () => { app.zeigeBlatt(null); void installieren(app); } }, "Jetzt installieren") : null, h("ul", { class: "install-schritte" }, h("li", {}, h("b", {}, "iPhone (Safari): "), "Teilen-Symbol, dann „Zum Home-Bildschirm“."), h("li", {}, h("b", {}, "Android (Chrome, Brave): "), "Menü ⋮, dann „App installieren“ oder „Zum Startbildschirm hinzufügen“."), h("li", {}, h("b", {}, "Android (Firefox): "), "Menü ⋮, dann „Installieren“."), h("li", {}, h("b", {}, "PC (Chrome, Edge, Brave): "), "Symbol „Installieren“ rechts in der Adressleiste.")), h("p", { class: "leise", style: "margin: 0" }, "Danach startet Dulle wie eine App, auch ohne Internet."));
+}
+export function installBlatt(app) {
+    return h("div", { class: "gruppe" }, h("div", { class: "blatt-kopf" }, h("h2", {}, "Als App installieren"), h("button", { class: "knopf text", onclick: () => app.zeigeBlatt(null) }, "Schließen")), installAnleitung(app));
+}
 export async function installieren(app) {
     const angebot = app.installAngebot;
     if (!angebot)

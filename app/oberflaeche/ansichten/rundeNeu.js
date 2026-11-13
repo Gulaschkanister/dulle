@@ -35,6 +35,8 @@ export function rundeNeu(app) {
         }
         entwurf = { name: "", spieler: [], eingabe: "" };
         vorbelegt = false;
+        // Die Meldung „Lege zuerst eure Runde … an“ ist jetzt erledigt.
+        app.melde(null);
         // Spec 016: Kam man über „Live spielen“, geht es an den Tisch; die Absicht geht nicht verloren.
         const live = leseLokal(NACH_ANLEGEN) === "live";
         schreibeLokal(NACH_ANLEGEN, null);
@@ -51,7 +53,7 @@ export function rundeNeu(app) {
                 document.getElementById("neuer-spieler")?.focus();
             }
         },
-    })), h("div", { class: "gruppe" }, h("div", { class: "zeile" }, h("label", { for: "neuer-spieler", style: "flex-grow: 1" }, "Spieler"), h("span", { class: "leise", style: `color: var(${anzahl >= 4 ? "--accent" : "--warning"})` }, anzahl >= 4 ? `${anzahl} Spieler` : leseLokal(NACH_ANLEGEN) === "live" ? (anzahl === 0 ? "Trag dich ein. Die anderen tragen sich beim Beitreten selbst ein, oder du trägst sie hier schon ein." : "Die anderen tragen sich beim Beitreten selbst ein. Fehlende Plätze kann auch die KI übernehmen.") : `noch ${4 - anzahl} bis zum ersten Abend`)), anzahl > 0
+    })), h("div", { class: "gruppe" }, h("div", { class: "zeile" }, h("label", { for: "neuer-spieler", style: "flex-grow: 1" }, "Spieler"), h("span", { class: "leise", style: `color: var(${anzahl === 0 ? "--warning" : "--accent"})` }, anzahl >= 4 ? `${anzahl} Spieler` : anzahl === 0 ? "Trag mindestens dich selbst ein." : `${anzahl} Spieler`)), anzahl > 0
         ? h("div", { class: "chips", "aria-label": "Spieler der neuen Runde" }, entwurf.spieler.map((name, i) => h("span", { class: `chip${name === entwurf.zuletzt && i === anzahl - 1 ? " neu-dazu" : ""}` }, name, h("button", {
             class: "weg", type: "button", "aria-label": `${name} entfernen`,
             onclick: () => aendern({ spieler: entwurf.spieler.filter((_, j) => j !== i), zuletzt: "" }),
@@ -64,6 +66,10 @@ export function rundeNeu(app) {
             e.preventDefault();
             hinzufuegen();
         } },
-    }), h("button", { type: "button", class: "knopf", style: "flex: none", "data-fokus": "hinzufuegen", onclick: hinzufuegen }, "Hinzufügen")), h("p", { class: "leise", style: "margin: 0" }, "Enter fügt hinzu und hält das Feld offen für den Nächsten. Weitere Spieler kommen jederzeit dazu.")), h("div", { class: "dehnen" }), h("button", { class: "knopf haupt", "data-fokus": "runde-anlegen", onclick: () => void anlegen() }, anzahl > 0 ? `Runde mit ${anzahl} Spielern anlegen` : "Runde anlegen"));
+    }), h("button", { type: "button", class: "knopf", style: "flex: none", "data-fokus": "hinzufuegen", onclick: hinzufuegen }, "Hinzufügen")), 
+    // Spec 017 (Live-Test 2026-11-13): ein Text für beide Wege, passend zu dem, was die App wirklich verlangt.
+    h("p", { class: "leise", style: "margin: 0" }, anzahl >= 4
+        ? "Enter fügt hinzu und hält das Feld offen. Weitere Spieler kommen jederzeit dazu."
+        : "Live am Handy tragen sich die anderen beim Beitreten selbst ein, freie Plätze kann die KI übernehmen. Zum Mitschreiben mit echten Karten braucht ihr vier.")), h("div", { class: "dehnen" }), h("button", { class: "knopf haupt", "data-fokus": "runde-anlegen", onclick: () => void anlegen() }, anzahl > 0 ? `Runde mit ${anzahl} ${anzahl === 1 ? "Spieler" : "Spielern"} anlegen` : "Runde anlegen"));
 }
 //# sourceMappingURL=rundeNeu.js.map

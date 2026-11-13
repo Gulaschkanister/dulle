@@ -37,20 +37,33 @@ function qrPlatzhalter(text, beschriftung) {
     void qrCode(text, beschriftung).then((el) => { qrCache.set(text, el); platz.replaceWith(el); });
     return platz;
 }
+/** Spec 017 (Live-Test): Seit wann wartet dieser Link auf das Internet? Danach gibt es einen Ausweg. */
+const linkSeit = new Map();
+const LINK_GEDULD_MS = 15_000;
 /** Spec 030: ein Link für den ganzen Tisch, Raum-ID und Passwort nur im `#fragment`. */
 function linkKarte(app, hauptsache) {
     const link = tischLink() ?? "";
     const offen = raumOffen();
+    if (!linkSeit.has(link)) {
+        linkSeit.set(link, Date.now());
+        setTimeout(() => { if (!raumOffen() && location.hash.includes("/am-handy"))
+            app.zeichne(); }, LINK_GEDULD_MS + 100);
+    }
+    const zaeh = !offen && Date.now() - linkSeit.get(link) >= LINK_GEDULD_MS;
     // Spec 017: Der Link als QR-Code: Am Tisch scannt jeder ihn einmal mit der Kamera, ohne Antwort-Code zurück.
-    return h("section", { class: "karte einladung", "aria-label": "Einladungslink" }, h("strong", {}, "Ein Link für alle"), h("button", { class: hauptsache ? "knopf haupt" : "knopf", "data-fokus": "link-teilen", onclick: () => void teileLink(app, link) }, "Link teilen"), offen && link ? [qrPlatzhalter(link, "QR-Code mit dem Einladungslink"),
+    return h("section", { class: "karte einladung", "aria-label": "Einladungslink" }, h("strong", {}, "Ein Link für alle"), h("button", { class: hauptsache ? "knopf haupt" : "knopf", "data-fokus": "link-teilen", onclick: () => void teileLink(app, link) }, "Link teilen"), 
+    // Der Link steht sofort fest; wer früh scannt, wartet beim Beitreten kurz, bis der Tisch im Internet erreichbar ist.
+    link ? [qrPlatzhalter(link, "QR-Code mit dem Einladungslink"),
         h("p", { class: "leise", style: "margin: 0; text-align: center" }, "Am Tisch: mit der Kamera scannen, fertig.")] : null, h("details", {}, h("summary", {}, "Link als Text"), h("textarea", { readonly: true, rows: 3, id: "tisch-link", "aria-label": "Einladungslink" }, link)), h("p", { class: "leise", style: "margin: 0", role: "status", "data-raum": offen ? "offen" : "zu" }, offen ? "Wer den Link antippt, kommt direkt an den Tisch. Der Link ist nur für eure Runde: Wer ihn hat, kann sich dazusetzen."
-        : navigator.onLine ? "Der Tisch wird im Internet erreichbar gemacht …" : "Ohne Internet geht nur der QR-Code."));
+        : navigator.onLine ? "Der Tisch wird im Internet erreichbar gemacht …" : "Ohne Internet geht nur der QR-Tausch."), zaeh || !navigator.onLine ? h("div", { class: "hinweis info", role: "note", "data-link-zaeh": "" }, h("span", { style: "flex-grow: 1" }, "Klappt es über das Internet nicht? Im selben WLAN geht es auch ohne."), h("button", { class: "knopf", "data-fokus": "weg-ohne-internet", onclick: () => { schreibeLokal(WEG, "qr"); app.zeichne(); } }, "Ohne Internet (QR)")) : null);
 }
 /** Spec 016: Was fehlt bis zum Start, statt nur „Starten, sobald alle vier sitzen“. */
-function startText(frei, waehlen = 0) {
+function startText(frei, waehlen = 0, perLink = false) {
     if (frei === 0)
         return waehlen === 1 ? "Ein Gast wählt sich noch aus" : "Gäste wählen sich noch aus";
-    return frei === 1 ? "Noch 1 Platz frei: einladen oder mit KI besetzen" : `Noch ${frei} Plätze frei: einladen oder mit KI besetzen`;
+    // Spec 017 (Live-Test): Per Link gibt es keinen Einladen-Knopf je Platz, eingeladen wird über den Link.
+    const wie = perLink ? "Link teilen oder mit KI besetzen" : "einladen oder mit KI besetzen";
+    return frei === 1 ? `Noch 1 Platz frei: ${wie}` : `Noch ${frei} Plätze frei: ${wie}`;
 }
 export function tischEroeffnen(app, teile) {
     const r = app.runde(teile[1] ?? "");
@@ -82,7 +95,9 @@ export function tischEroeffnen(app, teile) {
             profilWahl = { rundeId: r.id, profil: zuletztGenutzt(r) };
         const profil = profilWahl.profil;
         const spieler = Object.values(r.spieler).filter((s) => !s.ausgeblendet && !s.zusammengefuehrtIn).sort((a, b) => a.name.localeCompare(b.name, "de"));
-        const ich = leseLokal(ICH(r.id));
+        // Spec 017 (Live-Test): Steht nur ein Name in der Runde, ist er gleich gewählt.
+        const gemerkt = leseLokal(ICH(r.id));
+        const ich = gemerkt && spieler.some((s) => s.id === gemerkt) ? gemerkt : spieler.length === 1 ? spieler[0].id : null;
         return h("div", { class: "seite" }, filzkopf("Tisch eröffnen", `${r.name} · du spielst ganz normal mit`, { rechts: h("a", { class: "knopf", href: `#/runde/${r.id}` }, "Abbrechen") }), meldung(app), h("section", { class: "gruppe" }, h("h2", { id: "ich-titel" }, "Wer bist du?"), h("div", { class: "raster-2", role: "group", "aria-labelledby": "ich-titel" }, spieler.map((s) => h("button", {
             class: "wahl", "aria-pressed": String(s.id === ich), "data-fokus": `ich-${s.id}`,
             onclick: () => { schreibeLokal(ICH(r.id), s.id); app.zeichne(); },
@@ -193,6 +208,6 @@ export function tischEroeffnen(app, teile) {
                     app.melde(f);
                 else
                     app.geheZu("/tisch"); },
-            }, bereit ? "Spiel starten" : startText(PLAETZE.filter((p) => p !== z.eigenerPlatz && !g.verbunden(p)).length, PLAETZE.filter((p) => g.verbunden(p) && !z.plaetze[p - 1].spielerId).length)));
+            }, bereit ? "Spiel starten" : startText(PLAETZE.filter((p) => p !== z.eigenerPlatz && !g.verbunden(p)).length, PLAETZE.filter((p) => g.verbunden(p) && !z.plaetze[p - 1].spielerId).length, weg === "link")));
 }
 //# sourceMappingURL=tischEroeffnen.js.map

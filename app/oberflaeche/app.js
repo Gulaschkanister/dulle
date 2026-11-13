@@ -19,6 +19,8 @@ export class App {
     hinweisHomeBildschirm = false;
     /** Spec 017: Android/Chrome bietet das Installieren an (`beforeinstallprompt`); null, wenn nicht oder schon installiert. */
     installAngebot = null;
+    /** Spec 017: Läuft Dulle schon als installierte App (vom Startbildschirm)? */
+    alsApp = false;
     meldung = null;
     meldungArt = "fehler";
     /** Nur beim allerersten Zeichnen true: Dann springt der Start direkt in einen offenen Abend. */
