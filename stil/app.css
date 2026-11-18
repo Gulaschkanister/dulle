@@ -460,6 +460,12 @@ progress.laedt { width: 100%; height: 6px; accent-color: var(--accent); }
 @media (pointer: fine) and (max-width: 699px) { .spieltisch .hochkant.breiter { display: flex; } }
 /* Ausweg im Hinweis: als Knopf gesetzt, nicht als unterstrichener Link. */
 .spieltisch .hochkant a.tisch-knopf { display: inline-flex; align-items: center; min-height: 44px; margin-top: 8px; text-decoration: none; }
+/* Spec 017 H: Wenig Höhe (Handy quer mit Browserleisten): Fenster oben und kompakt, die Kartenecken bleiben frei. */
+@media (max-height: 420px) {
+  .tisch-panel:not(.ende):not(.breit) { top: 46px; transform: translateX(-50%); padding: 10px 14px; gap: 6px; max-height: calc(100% - 46px - 90px); }
+  .tisch-panel:not(.ende):not(.breit) h2 { font-size: 17px; }
+  .tisch-panel .erklaerung { display: none; }
+}
 @media (max-height: 380px) {
   .hand-faecher .spielkarte + .spielkarte { margin-left: -26px; }
   .tisch-status, .ansage { bottom: 88px; }

@@ -10,6 +10,7 @@ import { beantworteEinladung, erstelleEinladung } from "../netz/webrtc.js";
 import { codeAusText } from "../netz/sdp.js";
 import { leseLokal, schreibeLokal } from "./app.js";
 import { zuletztGenutzt } from "./regeln.js";
+import { vollbildAus } from "./vollbild.js";
 const GESPEICHERT = "tisch";
 /** Nur für Tests (E2E): feste Seeds in dieser Reihenfolge, damit Hochzeit, Armut usw. sicher vorkommen. */
 const TEST_SEEDS = "dulle.test.seeds";
@@ -88,12 +89,6 @@ function starteUhr(app) {
         void t.gastgeber?.tick();
         if (t.rolle === "gastgeber" && !gastgeberRaum)
             void raumOeffnen(app);
-        // Die Einladeseite zeigt, ob der Tisch im Internet erreichbar ist; das ändert sich ohne eigenes Ereignis.
-        if (t.rolle === "gastgeber" && raumOffen() !== zuletztOffen) {
-            zuletztOffen = raumOffen();
-            if (location.hash.includes("/am-handy"))
-                app.zeichne();
-        }
         if (t.rolle === "mitspieler" && t.client && !t.client.verbunden && !t.client.tisch?.schreiberWeiter && !t.client.tisch?.beendet)
             void zurueckUeberRaum(app);
         const ti = t.client?.tisch;
@@ -251,6 +246,7 @@ async function raumOeffnen(app) {
     if (!g || nurKi || gastgeberRaum || !navigator.onLine || leseLokal(TEST_OHNE_RAUM) || Date.now() - letztesRaumOeffnen < RUECKKEHR_ABSTAND_MS)
         return;
     letztesRaumOeffnen = Date.now();
+    raumSeit = Date.now();
     const raum = g.raum;
     gastgeberRaum = { beiGegenueber: () => undefined, verlasse: () => undefined }; // Platzhalter: nicht doppelt öffnen
     try {
@@ -271,8 +267,14 @@ async function raumOeffnen(app) {
     app.zeichne();
 }
 /** Spec 017 (Live-Test): offen heißt, im Raum und mit mindestens einem verbundenen Vermittlungsserver. */
-export function raumOffen() { return raumBereit && (gastgeberRaum?.erreichbar?.() ?? true); }
-let zuletztOffen = false;
+export function raumOffen() {
+    // Nur im Test: langsamer Relay (erst nach so vielen ms erreichbar).
+    const spaet = Number(leseLokal("dulle.test.raumSpaetMs") ?? 0);
+    if (spaet && Date.now() - raumSeit < spaet)
+        return false;
+    return raumBereit && (gastgeberRaum?.erreichbar?.() ?? true);
+}
+let raumSeit = 0;
 /** Link für den ganzen Tisch: Raum-ID und Passwort stehen nur im `#fragment`. */
 export function tischLink() {
     const g = aktiv?.gastgeber;
@@ -331,7 +333,7 @@ export async function uebergeben(app, an) {
         schreibeLokal(TOKEN(g.zustand.tischId), eigen.token);
     const ti = aktiv?.client?.tisch;
     const sicht = aktiv?.client?.sicht ?? null;
-    await schliesseTisch(app);
+    await schliesseTisch(app, true);
     // Erst schließen, wenn die Übergabe unterwegs ist (pc.close() verwirft, was noch im Puffer liegt).
     setTimeout(() => g.schliesseAlle(), 1500);
     // Dieses Gerät sitzt weiter am Tisch, jetzt als Mitspieler, der sich vom neuen Gastgeber zurückholen lässt.
@@ -567,7 +569,10 @@ async function tischZuMitFrist(app, g) {
     setTimeout(() => { g.schliesseAlle(); raum?.verlasse(); }, 1500);
 }
 /** Tisch auf diesem Gerät beenden (Abend abschließen oder verlassen). */
-export async function schliesseTisch(app) {
+export async function schliesseTisch(app, vollbildBehalten = false) {
+    // Spec 017 H: Ohne Tisch braucht es kein Vollbild mehr (außer man spielt gleich als Mitspieler weiter).
+    if (!vollbildBehalten)
+        vollbildAus();
     if (aktiv?.rolle === "gastgeber") {
         offenerTisch = null;
         await app.speicher.setzeEinstellung(GESPEICHERT, null);

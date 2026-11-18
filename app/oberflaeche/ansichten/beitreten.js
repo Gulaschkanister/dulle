@@ -6,6 +6,7 @@ import { h } from "../dom.js";
 import { qrCode } from "../qr.js";
 import { istRaum } from "../../netz/raum.js";
 import { nameBlatt } from "./spieltisch.js";
+import { vollbildAn, vollbildSinnvoll } from "../vollbild.js";
 import { beitreten, beitretenUeberRaum, schliesseTisch, tisch, zurueckkehren } from "../tisch.js";
 let auswahl = null;
 let neuerName = "";
@@ -105,7 +106,8 @@ function inhalt(app, t) {
                 } }),
         ] : null), h("div", { class: "dehnen" }), h("button", {
             class: "knopf haupt", disabled: !gewaehlt && !(neu && neuerName.trim()), "data-fokus": "platz-nehmen",
-            onclick: () => { if (neu)
+            onclick: () => { if (vollbildSinnvoll(app.alsApp))
+                vollbildAn(false); if (neu)
                 c.neuAmTisch(neuerName);
             else if (gewaehlt)
                 c.waehle(gewaehlt.id); },

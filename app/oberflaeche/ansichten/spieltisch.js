@@ -9,6 +9,7 @@ import { h, punkteText } from "../dom.js";
 import { karte, kartensatz } from "../karten.js";
 import { qrCode, scanne } from "../qr.js";
 import { abendBeenden, darfUebernehmen, fortsetzenAlsMitspieler, mitEchtenKartenWeiter, RAUM_GEDULD_MS, raumOffen, letzterStand, schliesseTisch, tisch, uebergeben, uebernehmen, wachBleiben, zurueckkehren, } from "../tisch.js";
+import { istVollbild, querSperren, vollbildAn, vollbildSinnvoll } from "../vollbild.js";
 const SOLONAME = { damen: "Damen", buben: "Buben", fleischlos: "Fleischlos", kreuz: "Kreuz", pik: "Pik", herz: "Herz", karo: "Karo" };
 const STUFE_TEXT = { ansage: "", k90: "keine 90", k60: "keine 60", k30: "keine 30", schwarz: "schwarz" };
 const LAGE = ["unten", "links", "oben", "rechts"];
@@ -17,6 +18,7 @@ let vorbehaltSchritt = { spielNr: 0, wahl: false, klaerung: "fehl" };
 let rueckgabe = { spielNr: 0, karten: new Set() };
 let letzterStich = null;
 let wechselVerborgen = null;
+let querGesperrt = false;
 let qrFuer = null;
 let scannerStopp = null;
 const WAHL_TEXT = { ki: "KI spielt", warten: "Weiter warten", ersatz: "Ersatz", neuGeben: "Spiel neu geben", beenden: "Abend beenden" };
@@ -45,6 +47,13 @@ export function spieltisch(app) {
         return h("div", { class: "seite" }, kopf("Kein Tisch offen", null), h("p", {}, "Eröffne einen Tisch über die Runde oder scanne eine Einladung."), h("a", { class: "knopf", href: "#/" }, "Zur Startseite"));
     }
     void wachBleiben();
+    // Spec 017 H: Wer in der Lobby ins Vollbild kam (ohne Sperre), spielt am Tisch quer.
+    if (istVollbild() && !querGesperrt) {
+        querGesperrt = true;
+        querSperren();
+    }
+    if (!istVollbild())
+        querGesperrt = false;
     const satz = kartensatz();
     const name = (p) => ti.plaetze[p - 1]?.name ?? `Platz ${p}`;
     const lage = (p) => LAGE[(p - s.ich + 4) % 4];
@@ -88,7 +97,9 @@ function kopfzeile(app, c, s, ti, gesamt) {
     const holen = tisch()?.rolle === "gastgeber"
         ? ti.plaetze.find((p) => ti.ersatzFuer === p.platz || (p.zustand === "weg" && !p.zurueckgeholt && !kommtSelbst(ti, p)) || p.ki === "fuer") : undefined;
     return h("header", { class: "tisch-kopf" }, h("span", { class: "tisch-info" }, `Spiel ${s.spielNr} · ${typText(s, (p) => ti.plaetze[p - 1]?.name ?? "")}${s.phase === "spiel" ? ` · Stich ${stich} von ${gesamt}` : ""}`), h("span", { class: "dehnen" }), holen ? h("a", { class: "tisch-knopf hervor", href: `#/runde/${ti.rundeId}/am-handy`, "data-fokus": "zurueckholen" }, ti.ersatzFuer === holen.platz ? "Ersatz einladen" : `${holen.name} zurückholen`) : null, s.eigenePartei && s.phase !== "vorbehalt" && s.phase !== "vorbehaltArt"
-        ? h("span", { class: `partei-marke ${s.eigenePartei}` }, `Du spielst ${s.eigenePartei === "re" ? "Re" : "Kontra"}`) : null, ti.sitzungId ? h("button", { class: "tisch-knopf", "data-fokus": "stand", onclick: () => app.zeigeBlatt(standBlatt(app, ti)) }, "Stand") : null, h("button", { class: "tisch-knopf", "data-fokus": "menue", onclick: () => app.zeigeBlatt(menue(app, c, ti)) }, "Menü"));
+        ? h("span", { class: `partei-marke ${s.eigenePartei}` }, `Du spielst ${s.eigenePartei === "re" ? "Re" : "Kontra"}`) : null, 
+    // Spec 017 H: Vollbild, solange die Browserleisten Platz nehmen (Handy im Browser, nicht als App).
+    vollbildSinnvoll(app.alsApp) && !istVollbild() ? h("button", { class: "tisch-knopf", "data-fokus": "vollbild", onclick: () => vollbildAn() }, "Vollbild") : null, ti.sitzungId ? h("button", { class: "tisch-knopf", "data-fokus": "stand", onclick: () => app.zeigeBlatt(standBlatt(app, ti)) }, "Stand") : null, h("button", { class: "tisch-knopf", "data-fokus": "menue", onclick: () => app.zeigeBlatt(menue(app, c, ti)) }, "Menü"));
 }
 function gegner(s, ti, p, wo, name) {
     const stiche = s.stiche.filter((st) => st.gewinner === p).length;
@@ -233,7 +244,7 @@ function vorbehaltPanel(app, c, s, ti, satz, name) {
     const moeglich = s.moeglicheVorbehalte;
     const zweiteRunde = s.phase === "vorbehaltArt";
     if (!vorbehaltSchritt.wahl && !zweiteRunde) {
-        return h("section", { class: "tisch-panel", "aria-label": "Vorbehalte" }, kopfzeile, h("h2", {}, "Hast du einen Vorbehalt?"), h("div", { class: "raster-2" }, h("button", { class: "knopf haupt", "data-fokus": "gesund", onclick: () => c.aktion({ typ: "vorbehalt", art: "gesund" }) }, "Gesund"), h("button", { class: "knopf", "data-fokus": "vorbehalt", disabled: moeglich.length === 0, onclick: () => { vorbehaltSchritt.wahl = true; app.zeichne(); } }, "Vorbehalt")), h("p", { class: "leise", style: "margin: 0" }, "Was für ein Vorbehalt, sagst du erst im nächsten Schritt, wie am echten Tisch."));
+        return h("section", { class: "tisch-panel", "aria-label": "Vorbehalte" }, kopfzeile, h("h2", {}, "Hast du einen Vorbehalt?"), h("div", { class: "raster-2" }, h("button", { class: "knopf haupt", "data-fokus": "gesund", onclick: () => c.aktion({ typ: "vorbehalt", art: "gesund" }) }, "Gesund"), h("button", { class: "knopf", "data-fokus": "vorbehalt", disabled: moeglich.length === 0, onclick: () => { vorbehaltSchritt.wahl = true; app.zeichne(); } }, "Vorbehalt")), h("p", { class: "leise erklaerung", style: "margin: 0" }, "Was für ein Vorbehalt, sagst du erst im nächsten Schritt, wie am echten Tisch."));
     }
     const waehltSelbst = hochzeitKlaerung(ti.profil) === null;
     const solo = moeglich.includes("solo") ? soliErlaubt(ti.profil) : [];
@@ -242,7 +253,7 @@ function vorbehaltPanel(app, c, s, ti, satz, name) {
         class: "wahl", "aria-pressed": String(vorbehaltSchritt.klaerung === k), onclick: () => { vorbehaltSchritt.klaerung = k; app.zeichne(); },
     }, k === "fremder" ? "erster Fremder" : k === "fehl" ? "erster Fehl" : "erster Trumpf"))) : null) : null, moeglich.includes("armut") ? h("button", { class: "knopf", "data-fokus": "armut", onclick: () => c.aktion({ typ: "vorbehalt", art: "armut" }) }, "Armut") : null, solo.length ? h("div", { class: "solo-raster", role: "group", "aria-label": "Solo" }, solo.map((a) => h("button", {
         class: "knopf", "data-fokus": `solo-${a}`, onclick: () => c.aktion({ typ: "vorbehalt", art: "solo", soloart: a }),
-    }, soloName(a)))) : null, h("p", { class: "leise", style: "margin: 0" }, "Die anderen sehen nur „Vorbehalt“. Wer spielt, entscheidet die Rangfolge: Solo vor Armut vor Hochzeit."));
+    }, soloName(a)))) : null, h("p", { class: "leise erklaerung", style: "margin: 0" }, "Die anderen sehen nur „Vorbehalt“. Wer spielt, entscheidet die Rangfolge: Solo vor Armut vor Hochzeit."));
 }
 /** Spec 016: Ein Spiel von Hand eintragen. Der Gastgeber wartet mit dem Austeilen, bis es eingetragen oder abgebrochen ist. */
 function eintragStarten(app, c, ti) {

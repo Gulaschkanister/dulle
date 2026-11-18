@@ -34,6 +34,9 @@ async function los() {
         app.zeichne(); });
     addEventListener("appinstalled", () => { app.installAngebot = null; if (!app.ersteAnsicht)
         app.zeichne(); });
+    // Spec 017 H: Knopf „Vollbild“ verschwindet im Vollbild und kommt nach dem Verlassen wieder.
+    document.addEventListener("fullscreenchange", () => { if (!app.ersteAnsicht)
+        app.zeichne(); });
     await speicher.setzeEinstellung("persistenz", await bittePersistenz(navigator.storage));
     await ladeKartensaetze(speicher);
     await ladeOffenenTisch(app);

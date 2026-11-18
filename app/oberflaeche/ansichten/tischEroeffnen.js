@@ -8,6 +8,7 @@ import { qrCode, scanne } from "../qr.js";
 import { abweichungenText, merkeProfil, regelnWahlBlatt, zuletztGenutzt } from "../regeln.js";
 import { kommtSelbst } from "./spieltisch.js";
 import { antwortUebernehmen, einladen, eroeffne, eroeffneFuerAbend, mitEchtenKartenWeiter, raumOffen, schliesseTisch, tisch, tischLink } from "../tisch.js";
+import { vollbildAn, vollbildSinnvoll } from "../vollbild.js";
 const ICH = (rundeId) => `dulle.ich.${rundeId}`;
 /** Spec 030: zuletzt gewählter Weg zum Einladen. */
 const WEG = "dulle.einladungsweg";
@@ -40,6 +41,8 @@ function qrPlatzhalter(text, beschriftung) {
 /** Spec 017 (Live-Test): Seit wann wartet dieser Link auf das Internet? Danach gibt es einen Ausweg. */
 const linkSeit = new Map();
 const LINK_GEDULD_MS = 15_000;
+let linkPruefung = null;
+let zuletztGezeigt = false;
 /** Spec 030: ein Link für den ganzen Tisch, Raum-ID und Passwort nur im `#fragment`. */
 function linkKarte(app, hauptsache) {
     const link = tischLink() ?? "";
@@ -50,6 +53,19 @@ function linkKarte(app, hauptsache) {
             app.zeichne(); }, LINK_GEDULD_MS + 100);
     }
     const zaeh = !offen && Date.now() - linkSeit.get(link) >= LINK_GEDULD_MS;
+    // Erreichbarkeit ändert sich ohne eigenes Ereignis: nur hier, im Link-Weg, nachsehen und bei Änderung neu zeichnen
+    // (im QR-Weg nie: Neuzeichnen klappt dort „Code als Text“ wieder zu).
+    zuletztGezeigt = offen;
+    linkPruefung ??= setInterval(() => {
+        // Nur solange die Link-Karte im Bild ist; im QR-Weg nie neu zeichnen (dort klappte „Code als Text“ sonst zu).
+        if (!location.hash.includes("/am-handy") || !document.querySelector("[data-raum]")) {
+            clearInterval(linkPruefung);
+            linkPruefung = null;
+            return;
+        }
+        if (raumOffen() !== zuletztGezeigt)
+            app.zeichne();
+    }, 1000);
     // Spec 017: Der Link als QR-Code: Am Tisch scannt jeder ihn einmal mit der Kamera, ohne Antwort-Code zurück.
     return h("section", { class: "karte einladung", "aria-label": "Einladungslink" }, h("strong", {}, "Ein Link für alle"), h("button", { class: hauptsache ? "knopf haupt" : "knopf", "data-fokus": "link-teilen", onclick: () => void teileLink(app, link) }, "Link teilen"), 
     // Der Link steht sofort fest; wer früh scannt, wartet beim Beitreten kurz, bis der Tisch im Internet erreichbar ist.
@@ -198,13 +214,15 @@ export function tischEroeffnen(app, teile) {
         // Nach einer Übernahme liegt kein Spiel auf dem Tisch: neu geben, sobald alle wieder da sind.
         ? h("button", {
             class: "knopf haupt", disabled: !bereit || info.beendet, "data-fokus": "weiter-spielen",
-            onclick: async () => { await g.naechstesSpiel(); app.geheZu("/tisch"); },
+            onclick: async () => { if (vollbildSinnvoll(app.alsApp))
+                vollbildAn(); await g.naechstesSpiel(); app.geheZu("/tisch"); },
         }, bereit ? "Weiter spielen" : schonLive ? "Weiter, sobald alle wieder da sind" : `Spiel ${r.sitzungen[g.sitzungId]?.naechsteNr ?? ""} austeilen, sobald alle da sind`)
         : laeuft
             ? h("a", { class: "knopf haupt", href: "#/tisch", "data-fokus": "zum-tisch" }, "Zurück an den Tisch")
             : h("button", {
                 class: "knopf haupt", disabled: !bereit, "data-fokus": "starten",
-                onclick: async () => { const f = await g.starte(); if (f)
+                onclick: async () => { if (vollbildSinnvoll(app.alsApp))
+                    vollbildAn(); const f = await g.starte(); if (f)
                     app.melde(f);
                 else
                     app.geheZu("/tisch"); },

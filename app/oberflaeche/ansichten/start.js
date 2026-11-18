@@ -2,6 +2,7 @@
 // und „Gegen die KI üben“ (Spec 016).
 import { filzkopf, homeHinweis, installBlatt, installHinweis, kurzanleitung, meldung } from "../bausteine.js";
 import { abendBeginnenBlatt } from "./runde.js";
+import { vollbildAn, vollbildSinnvoll } from "../vollbild.js";
 import { h } from "../dom.js";
 import { ladenKnopf } from "../sicherung.js";
 import { leseLokal, schreibeLokal } from "../app.js";
@@ -19,7 +20,8 @@ export function start(app) {
     const echte = runden.filter((r) => r.id !== leseLokal("dulle.uebenRunde"));
     return h("div", { class: "seite" }, filzkopf("Dulle", "Doppelkopf mitschreiben und live spielen", { motiv: true, aktionen: h("a", { class: "knopf", href: "#/einstellungen", "data-fokus": "einstellungen" }, "Einstellungen") }), homeHinweis(app), installHinweis(app), meldung(app), tischHinweis(app), h("div", { class: "raster-2", role: "group", "aria-label": "Spielen" }, h("button", { class: "knopf", "data-fokus": "live-spielen", onclick: () => liveSpielen(app, echte) }, "Live spielen"), h("button", {
         class: "knopf", "data-fokus": "ueben",
-        onclick: async () => { const f = await ueben(app); if (f)
+        onclick: async () => { if (vollbildSinnvoll(app.alsApp))
+            vollbildAn(); const f = await ueben(app); if (f)
             app.melde(f);
         else
             app.geheZu("/tisch"); },
