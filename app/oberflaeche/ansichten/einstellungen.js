@@ -1,5 +1,6 @@
 // Einstellungen dieses Geräts (Spec 011, 030, 005): Kartensatz, Verbindung (TURN), Export an eine eigene Seite.
 import { filzkopf, installAnleitung, kurzanleitung, meldung } from "../bausteine.js";
+import { ladenKnopf } from "../sicherung.js";
 import { h } from "../dom.js";
 import { alleKartensaetze, istEigener, karte, kartensatz, loescheKartensatz, speichereKartensatz, waehleKartensatz } from "../karten.js";
 import { pruefeKartensatz } from "../../kern/kartensatz.js";
@@ -13,8 +14,10 @@ const FARBEN = ["kreuz-D-a", "pik-D-a", "herz-D-a", "karo-D-a"];
 export function einstellungen(app) {
     const aktuell = kartensatz().id;
     return h("div", { class: "seite" }, filzkopf("Einstellungen", "Gilt nur für dieses Gerät", { rechts: h("a", { class: "knopf", href: "#/" }, "Zurück") }), meldung(app), 
-    // Spec 017: Hilfe mit Kurzanleitung und „Als App installieren“.
-    h("section", { class: "gruppe", "aria-labelledby": "hilfe-titel" }, h("h2", { id: "hilfe-titel" }, "Hilfe"), kurzanleitung(true), app.alsApp ? h("p", { class: "leise", style: "margin: 0" }, "Dulle läuft schon als App.") : [h("h3", {}, "Als App installieren"), installAnleitung(app)]), h("section", { class: "gruppe", "aria-labelledby": "kartensatz-titel" }, h("h2", { id: "kartensatz-titel" }, "Kartensatz"), h("div", { class: "liste-saetze", role: "radiogroup", "aria-labelledby": "kartensatz-titel" }, alleKartensaetze().map((satz) => h("button", {
+    // Spec 017: Hilfe mit Kurzanleitung; Spec 018 (Gestaltung): „Als App installieren“ als eigener Abschnitt.
+    h("section", { class: "gruppe", "aria-labelledby": "hilfe-titel" }, h("h2", { id: "hilfe-titel" }, "Hilfe"), kurzanleitung(true)), h("section", { class: "gruppe", "aria-labelledby": "app-titel" }, h("h2", { id: "app-titel" }, "Als App installieren"), app.alsApp ? h("p", { class: "leise", style: "margin: 0" }, "Dulle läuft schon als App.") : installAnleitung(app)), 
+    // Spec 018: eine Runde aus einer Sicherungsdatei laden (früher auf der Startseite).
+    h("section", { class: "gruppe", "aria-labelledby": "datei-titel" }, h("h2", { id: "datei-titel" }, "Sicherung laden"), h("p", { class: "leise", style: "margin: 0" }, "Eine Runde aus einer Sicherungsdatei übernehmen, z. B. von einem anderen Handy."), ladenKnopf(app)), h("section", { class: "gruppe", "aria-labelledby": "kartensatz-titel" }, h("h2", { id: "kartensatz-titel" }, "Kartensatz"), h("div", { class: "liste-saetze", role: "radiogroup", "aria-labelledby": "kartensatz-titel" }, alleKartensaetze().map((satz) => h("button", {
         class: "wahl satz-wahl", role: "radio", "aria-checked": String(satz.id === aktuell), "data-fokus": `satz-${satz.id}`,
         onclick: () => { waehleKartensatz(satz.id); app.zeichne(); },
     }, h("span", { class: "satz-kopf" }, h("strong", {}, satz.name), h("span", { class: "leise" }, satz.beschreibung)), h("span", { class: "satz-reihe", "aria-hidden": "true" }, VORSCHAU.map((id) => karte(id, { groesse: "klein", satz }))), h("span", { class: "satz-reihe", "aria-hidden": "true" }, FARBEN.map((id) => karte(id, { groesse: "klein", satz })))))), 

@@ -33,7 +33,7 @@ export function spielerWahl(runde, z, aendern, neu) {
                     aendern({ ...z, reihe: [...z.reihe, s.id] });
             },
         }, h("span", { class: "kuerzen" }, gewaehlt ? `${idx + 1} · ${kurz[s.id] ?? s.name}` : s.name));
-    }), neu ? h("button", { class: "wahl neu", "data-fokus": "sitz-neu", onclick: neu }, "+ Neu") : null);
+    }), neu ? h("button", { class: "wahl neu", "data-fokus": "sitz-neu", onclick: neu }, "+ Spieler anlegen") : null);
 }
 export function vorhandWahl(runde, z, aendern) {
     const kurz = kurzNamen(runde, z.reihe);

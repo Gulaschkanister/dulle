@@ -69,9 +69,9 @@ export class App {
         return undefined;
     }
     /** Offener Abend; mit nurHier nur einer, den dieses Gerät schreibt (Spec 016: genau ein Gerät schreibt). */
-    offeneSitzung(rundeId, nurHier = false) {
+    offeneSitzung(rundeId, nurHier = false, ausserRunde) {
         const kandidaten = Object.values(this.sicht)
-            .filter((r) => rundeId === undefined || r.id === rundeId)
+            .filter((r) => (rundeId === undefined || r.id === rundeId) && r.id !== ausserRunde)
             .flatMap((runde) => Object.values(runde.sitzungen).filter((s) => !s.abgeschlossen && !s.verworfen && (!nurHier || s.schreibendesGeraet === this.geraet)).map((sitzung) => ({ runde, sitzung })));
         return kandidaten.sort((a, b) => (a.sitzung.id < b.sitzung.id ? 1 : -1))[0];
     }
@@ -144,6 +144,9 @@ export class App {
     }
     async navigiert() {
         this.blatt = null;
+        // Spec 018 (Erstnutzer): Wer den Abend verlässt, nimmt „Rückgängig“ nicht mit; das vorgemerkte Spiel gilt dann.
+        if (this.ausstehend && !location.hash.startsWith("#/abend/"))
+            await this.festschreiben();
         // Seitenwechsel (Spec 006): Filzkopf bleibt, Inhalt blendet per CSS ein. Bewusst keine View Transitions:
         // Sie haben WebKit in den Tests abstürzen lassen (siehe CLAUDE.md, Fallstricke).
         this.seitenwechsel = true;
@@ -194,7 +197,21 @@ export class App {
         if (this.seitenwechsel && ansicht instanceof HTMLElement)
             ansicht.classList.add("seitenwechsel");
         this.seitenwechsel = false;
-        this.wurzel.replaceChildren(...knoten);
+        // Spec 018 (Erstnutzer Runde 3): Knoten, die bleiben (die Hülle eines offenen Blatts), nicht aus- und wieder
+        // einhängen. Sonst startet ihre Einblend-Animation bei jedem Neuzeichnen neu, und über einem Tisch, der oft neu
+        // zeichnet, bleibt z. B. das Blatt „Stand“ unsichtbar oder halb durchsichtig.
+        const bleiben = new Set(knoten);
+        for (const k of Array.from(this.wurzel.childNodes))
+            if (!bleiben.has(k))
+                k.remove();
+        let stelle = this.wurzel.firstChild;
+        for (const k of knoten) {
+            if (k === stelle) {
+                stelle = stelle.nextSibling;
+                continue;
+            }
+            this.wurzel.insertBefore(k, stelle);
+        }
         // Platz für den Hinweis unten, damit er die Hauptaktion nicht verdeckt.
         this.wurzel.classList.toggle("mit-toast", knoten.some((k) => k instanceof HTMLElement && k.classList.contains("toast")));
         this.ersteAnsicht = false;

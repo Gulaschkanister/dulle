@@ -84,8 +84,9 @@ export function abrechnung(app, teile) {
         ? h("a", { class: "knopf haupt", href: `#/runde/${r.id}`, "data-fokus": "zur-runde" }, "Zur Runde")
         // Spec 016: Abschließen kann nur das Gerät, das den Abend schreibt (sonst über den Spielblock übernehmen).
         : s.schreibendesGeraet === app.geraet
-            ? h("button", { class: "knopf haupt", "data-fokus": "abschliessen", onclick: () => void abschliessen() }, "Abend abschließen")
+            ? [h("p", { class: "leise", style: "margin: 0", "data-abschliessen-hinweis": "" }, "Abschließen hält den Endstand fest. Danach kommen keine Spiele mehr dazu (wieder aufnehmen geht im Spielblock)."),
+                h("button", { class: "knopf haupt", "data-fokus": "abschliessen", onclick: () => void abschliessen() }, "Abend abschließen")]
             : [h("p", { class: "leise", style: "margin: 0" }, "Abschließen kann das Gerät, das den Abend schreibt."),
-                h("a", { class: "knopf", href: `#/abend/${s.id}`, "data-fokus": "zum-spielblock" }, "Zum Spielblock")], h("a", { class: "knopf text", href: "#/", "data-fokus": "startseite" }, "Zur Startseite"));
+                h("a", { class: "knopf", href: `#/abend/${s.id}`, "data-fokus": "zum-spielblock" }, "Spielblock ansehen")], h("a", { class: "knopf text", href: "#/", "data-fokus": "startseite" }, "Zur Startseite"));
 }
 //# sourceMappingURL=abrechnung.js.map

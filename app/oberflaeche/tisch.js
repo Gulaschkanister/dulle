@@ -31,7 +31,7 @@ const RUECKKEHR_ABSTAND_MS = 15_000;
 export const RAUM_GEDULD_MS = 20_000;
 /** Plätze, deren 20 s auf der Platzliste schon abgelaufen und neu gezeichnet sind (Schlüssel: Platz und wegSeit). */
 const geduldVorbei = new Set();
-const KLAPPT_NICHT = "Der Tisch antwortet nicht. Ist die App beim Gastgeber offen? Dann „Noch einmal versuchen“. Sitzt ihr zusammen, kann der Gastgeber auch „Am Tisch (QR)“ wählen.";
+const KLAPPT_NICHT = "Der Tisch antwortet nicht. Ist die App beim Gastgeber offen? Dann „Noch einmal versuchen“. Sitzt ihr zusammen, kann der Gastgeber auch „Ohne Internet (QR)“ wählen.";
 let aktiv = null;
 let offenerTisch = null;
 let uhr = null;

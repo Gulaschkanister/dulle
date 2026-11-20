@@ -233,7 +233,7 @@ export function eintragen(app, teile) {
             : ti.eintragenMoeglich ? `${ti.gastgeberName || "Der Gastgeber"} hat nicht gewartet. Deine Auswahl bleibt.`
                 : "Das nächste Spiel läuft, du spielst mit. Deine Auswahl bleibt für danach."), ti.eintragenMoeglich && ti.eintragVon === null && !ti.plaetze.some((p) => p.ki)
         ? h("button", { class: "knopf", "data-fokus": "weiter-eintragen", onclick: () => { angemeldet = null; zugeteilt = null; app.zeichne(); } }, "Weiter eintragen")
-        : !ti.eintragenMoeglich ? h("a", { class: "knopf", href: "#/tisch", "data-fokus": "zum-tisch" }, "Zum Tisch") : null)
+        : !ti.eintragenMoeglich ? h("a", { class: "knopf", href: "#/tisch", "data-fokus": "zum-tisch" }, "Zurück an den Tisch") : null)
         : live && !ichTrageEin && !c.meldung ? h("p", { class: "leise", role: "status" }, ti.eintragVon !== null ? "Gerade trägt jemand anderes ein Spiel ein." : "Einen Moment, der Tisch hält das Austeilen an …") : null, h("div", { class: "segment", role: "group", "aria-label": "Eingabe" }, ["schnell", "rechner"].map((m) => h("button", {
         "aria-pressed": String(entwurf.modus === m), "data-fokus": `modus-${m}`,
         onclick: () => { schreibeLokal(MODUS(r.id), m); aendern({ modus: m }); },

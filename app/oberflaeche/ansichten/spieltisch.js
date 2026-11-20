@@ -268,7 +268,7 @@ function schreiberWeiterPanel(app, ti) {
     return h("section", { class: "tisch-panel klein weiter-echt", "aria-label": "Mit echten Karten weiter" }, h("h2", {}, "Weiter mit echten Karten"), h("p", { style: "margin: 0", role: "status" }, `${ti.gastgeberName} schreibt jetzt mit echten Karten weiter. Den Spielblock siehst du jederzeit.`), h("button", {
         class: "knopf haupt", "data-fokus": "zum-spielblock",
         onclick: async () => { const sid = ti.sitzungId; await schliesseTisch(app); app.geheZu(sid ? `/abend/${sid}` : "/"); },
-    }, "Zum Spielblock"));
+    }, "Spielblock ansehen"));
 }
 function endePanel(app, s, ti, name) {
     const d = s.ergebnis;
@@ -311,7 +311,7 @@ function endePanel(app, s, ti, name) {
     gastgeber && ti.sitzungId ? h("button", { class: "knopf text", "data-fokus": "ende-beenden", onclick: () => { if (nurKi(ti))
             void abendBeenden(app, true);
         else
-            app.zeigeBlatt(beendenBlatt(app, false)); } }, nurKi(ti) ? "Üben beenden" : "Abend beenden") : null));
+            app.zeigeBlatt(beendenBlatt(app, false)); } }, nurKi(ti) ? "Üben beenden" : "Abend beenden …") : null));
 }
 // ---------- Wiederverbinden (Spec 012, Mockup „Verbindung weg“) ----------
 /** Gemeinsame Frage, wenn ein Platz verwaist ist: Alle Verbliebenen sehen dasselbe, die erste Wahl gilt. */
@@ -337,7 +337,7 @@ function beendetPanel(app, ti, unterbrochen) {
     const gastgeber = tisch()?.rolle === "gastgeber";
     return h("section", { class: "tisch-panel", "aria-label": "Abend beendet" }, h("h2", {}, "Abend beendet"), h("p", { class: "leise", style: "margin: 0" }, unterbrochen ? "Alle abgeschlossenen Spiele bleiben gespeichert. Das unterbrochene Spiel zählt nicht." : "Alle Spiele bleiben gespeichert."), gastgeber && ti.sitzungId
         ? h("button", { class: "knopf haupt", "data-fokus": "zur-abrechnung", onclick: async () => { await schliesseTisch(app); app.geheZu(`/abend/${ti.sitzungId}/abrechnung`); } }, "Zur Abrechnung")
-        : [h("button", { class: "knopf haupt", "data-fokus": "tisch-verlassen", onclick: async () => { tisch()?.client?.trennen(); await schliesseTisch(app); app.geheZu(ti.sitzungId ? `/abend/${ti.sitzungId}` : "/"); } }, "Zum Spielblock"),
+        : [h("button", { class: "knopf haupt", "data-fokus": "tisch-verlassen", onclick: async () => { tisch()?.client?.trennen(); await schliesseTisch(app); app.geheZu(ti.sitzungId ? `/abend/${ti.sitzungId}` : "/"); } }, "Spielblock ansehen"),
             h("button", { class: "knopf text", "data-fokus": "zur-startseite", onclick: async () => { tisch()?.client?.trennen(); await schliesseTisch(app); app.geheZu("/"); } }, "Zur Startseite")]);
 }
 /** Spec 012, geplant: an wen der Tisch gehen kann (verbunden, Mensch). */
@@ -369,7 +369,7 @@ function standBlatt(app, ti) {
     const stand = ti.stand;
     const reihe = ti.plaetze.filter((p) => p.spielerId).map((p) => ({ name: p.platz === ti.ich ? `${p.name ?? ""} (du)` : p.name ?? "", wert: stand?.summen[p.spielerId] ?? 0 }))
         .sort((a, b) => b.wert - a.wert);
-    return h("div", { class: "gruppe", "aria-label": "Stand des Abends" }, h("div", { class: "blatt-kopf" }, h("h2", {}, "Stand des Abends"), h("button", { class: "knopf text", onclick: () => app.zeigeBlatt(null) }, "Schließen")), h("p", { class: "leise", style: "margin: 0" }, stand ? `Nach ${stand.spiele} ${stand.spiele === 1 ? "Spiel" : "Spielen"}` : "Noch kein Spiel."), h("div", { class: "stand-liste" }, reihe.map((z) => h("div", { class: "stand-zeile" }, h("span", {}, z.name), h("strong", { "data-stand": z.name }, punkteText(z.wert, true))))), ti.sitzungId ? h("a", { class: "knopf", href: `#/abend/${ti.sitzungId}`, onclick: () => app.zeigeBlatt(null) }, "Ganzer Spielblock") : null);
+    return h("div", { class: "gruppe", "aria-label": "Stand des Abends" }, h("div", { class: "blatt-kopf" }, h("h2", {}, "Stand des Abends"), h("button", { class: "knopf text", onclick: () => app.zeigeBlatt(null) }, "Schließen")), h("p", { class: "leise", style: "margin: 0" }, stand ? `Nach ${stand.spiele} ${stand.spiele === 1 ? "Spiel" : "Spielen"}` : "Noch kein Spiel."), h("div", { class: "stand-liste" }, reihe.map((z) => h("div", { class: "stand-zeile" }, h("span", {}, z.name), h("strong", { "data-stand": z.name }, punkteText(z.wert, true))))), ti.sitzungId ? h("a", { class: "knopf", href: `#/abend/${ti.sitzungId}`, onclick: () => app.zeigeBlatt(null) }, "Spielblock ansehen") : null);
 }
 /** Spec 017: den eigenen Namen ändern; der Gastgeber trägt ihn ein. */
 export function nameBlatt(app, c, jetzt) {
@@ -443,7 +443,7 @@ function menue(app, c, ti) {
     const ueben = nurKi(ti);
     const laeuft = !!t?.gastgeber?.spiel && t.gastgeber.spiel.phase !== "ende";
     const meinName = ti.plaetze.find((p) => p.platz === ti.ich)?.name ?? "";
-    return h("div", { class: "gruppe" }, h("div", { class: "blatt-kopf" }, h("h2", {}, "Menü"), h("button", { class: "knopf text", "data-fokus": "menue-schliessen", onclick: () => app.zeigeBlatt(null) }, "Schließen")), ti.sitzungId ? h("a", { class: "knopf", href: `#/abend/${ti.sitzungId}`, onclick: () => app.zeigeBlatt(null) }, "Spielblock ansehen") : null, 
+    return h("div", { class: "gruppe tisch-menue" }, h("div", { class: "blatt-kopf" }, h("h2", {}, "Menü"), h("button", { class: "knopf text", "data-fokus": "menue-schliessen", onclick: () => app.zeigeBlatt(null) }, "Schließen")), ti.sitzungId ? h("a", { class: "knopf", href: `#/abend/${ti.sitzungId}`, onclick: () => app.zeigeBlatt(null) }, "Spielblock ansehen") : null, 
     // Spec 017 (UI): Aufhören steht oben, damit es quer ohne Scrollen zu sehen ist (so nennt es die Kurzanleitung).
     gastgeber && ti.sitzungId ? (ueben
         ? h("button", { class: "knopf", "data-fokus": "ueben-beenden", onclick: async () => { app.zeigeBlatt(null); await abendBeenden(app, true); } }, "Üben beenden")
@@ -459,6 +459,8 @@ function menue(app, c, ti) {
     }, "Mit echten Karten weiter") : null, h("a", { class: "knopf", href: "#/einstellungen", onclick: () => app.zeigeBlatt(null) }, "Kartensatz ändern"), ti.ich && !ueben ? h("button", { class: "knopf", "data-fokus": "name-aendern", onclick: () => app.zeigeBlatt(nameBlatt(app, c, meinName)) }, "Name ändern") : null, gastgeber && !ueben ? h("a", { class: "knopf", href: `#/runde/${ti.rundeId}/am-handy`, onclick: () => app.zeigeBlatt(null) }, "Mitspieler neu einladen") : null, 
     // Spec 012, geplant: zwischen zwei Spielen an ein verbundenes Gerät übergeben.
     gastgeber && (!t?.gastgeber?.spiel || t.gastgeber.spiel.phase === "ende") && uebergabeZiele(ti).length > 0
-        ? h("button", { class: "knopf", "data-fokus": "uebergeben", onclick: () => app.zeigeBlatt(uebergabeBlatt(app, ti)) }, "Tisch übergeben …") : null, !gastgeber ? h("button", { class: "knopf", onclick: async () => { app.zeigeBlatt(null); c.trennen(); await schliesseTisch(app); app.geheZu("/"); } }, "Tisch verlassen") : null);
+        ? h("button", { class: "knopf", "data-fokus": "uebergeben", onclick: () => app.zeigeBlatt(uebergabeBlatt(app, ti)) }, "Tisch übergeben …") : null, 
+    // Spec 018 (Erstnutzer): Auch der Gastgeber kommt zur Startseite; der Tisch läuft weiter, die Startseite führt zurück.
+    gastgeber ? h("a", { class: "knopf", href: "#/", "data-fokus": "menue-startseite", onclick: () => app.zeigeBlatt(null) }, "Zur Startseite") : null, !gastgeber ? h("button", { class: "knopf", onclick: async () => { app.zeigeBlatt(null); c.trennen(); await schliesseTisch(app); app.geheZu("/"); } }, "Tisch verlassen") : null);
 }
 //# sourceMappingURL=spieltisch.js.map

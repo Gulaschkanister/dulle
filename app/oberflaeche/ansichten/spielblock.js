@@ -44,7 +44,7 @@ function vorzeichenKlasse(n) {
 export function spielblock(app, teile) {
     const gefunden = app.sitzung(teile[1] ?? "");
     if (!gefunden)
-        return h("div", { class: "seite" }, kopf("Abend nicht gefunden", null), h("a", { class: "knopf", href: "#/" }, "Zur Übersicht"));
+        return h("div", { class: "seite" }, kopf("Abend nicht gefunden", null), h("a", { class: "knopf", href: "#/" }, "Zur Startseite"));
     const { runde: r, sitzung: s } = gefunden;
     const ids = spalten(s);
     const kurz = kurzNamen(r, ids);
@@ -103,9 +103,11 @@ export function spielblock(app, teile) {
         ],
     }), homeHinweis(app), meldung(app), s.widerspruechlich
         ? h("div", { class: "hinweis fehler", role: "alert" }, `Zwei Geräte haben diesen Abend gleichzeitig beschrieben (Spiel ${s.konflikte.flatMap((k) => k.spielNummern).join(", ")}). Prüfe die Spiele und korrigiere oder verwirf das falsche.`)
-        : null, h("div", { class: "block-huelle" }, h("div", { class: "block", role: "table", "aria-label": "Spielblock" }, h("div", { class: "block-zeile kopfzeile", style: `--spalten: ${ids.length}`, role: "row" }, h("span", {}, "Nr"), ids.map((id) => h("span", { title: spielerName(r, id) }, kurz[id])), h("span", {}, "Wert")), zeilen.length === 0 ? h("p", { class: "leer", style: "padding: 16px 16px 16px 56px; margin: 0" }, "Noch kein Spiel. Nach dem ersten Spiel unten auf „Spiel eintragen“ tippen.") : zeilen, zeilen.length > 0
+        : null, h("div", { class: "block-huelle" }, h("div", { class: "block", role: "table", "aria-label": "Spielblock" }, 
+    // Spec 018: Die Legende steht im Block über der Kopfzeile (davor lag sie halb unter dem Filzkopf).
+    zeilen.length > 0 ? h("div", { class: "block-legende", role: "caption" }, `Zahlen: Stand nach dem Spiel · Unterstrichen: Gewinner · S Solo${s.spiele.some((sp) => sp.daten.praemie) ? " · H Hochzeitsprämie" : ""} · B Bock${gemischt ? " · E eingetragen" : ""} · Zeile antippen für Details`) : null, h("div", { class: "block-zeile kopfzeile", style: `--spalten: ${ids.length}`, role: "row" }, h("span", {}, "Nr"), ids.map((id) => h("span", { title: spielerName(r, id) }, kurz[id])), h("span", {}, "Wert")), zeilen.length === 0 ? h("p", { class: "leer", style: "padding: 16px 16px 16px 56px; margin: 0" }, "Noch kein Spiel. Nach dem ersten Spiel unten auf „Spiel eintragen“ tippen.") : zeilen, zeilen.length > 0
         ? h("div", { class: "block-zeile summe", style: `--spalten: ${ids.length}` }, h("span", {}, "Σ"), summenZellen, h("span", {}))
-        : null)), zeilen.length > 0 ? h("div", { class: "leise" }, `Unterstrichen: Gewinner · S Solo${s.spiele.some((sp) => sp.daten.praemie) ? " · H Hochzeitsprämie" : ""} · B Bock${gemischt ? " · E eingetragen" : ""} · Zeile antippen für Details`) : null, h("div", { class: "dehnen" }), 
+        : null)), h("div", { class: "dehnen" }), 
     // Fußleiste bleibt unten im Daumenbereich, auch an langen Abenden mit vielen Zeilen.
     h("div", { class: "fussleiste" }, abgeschlossen
         ? [
@@ -158,7 +160,7 @@ function menue(app, r, s) {
     // Am Tisch (Spec 010) regelt der Gastgeber Schmeißen, Plätze und Regeln; schreibt ein anderes Gerät, gibt es hier nur den Stand.
     const w = wege(app, s);
     if (s.abgeschlossen || !w.schreibtHier || w.mitKi) {
-        return h("div", { class: "gruppe" }, h("h2", {}, "Menü"), w.amTisch ? h("a", { class: "knopf", href: "#/tisch" }, "Zum Spieltisch") : null, !s.abgeschlossen && w.schreibtHier ? h("a", { class: "knopf", href: `#/abend/${s.id}/abrechnung` }, "Abend abschließen") : null, 
+        return h("div", { class: "gruppe" }, h("h2", {}, "Menü"), w.amTisch ? h("a", { class: "knopf", href: "#/tisch" }, "Zurück an den Tisch") : null, !s.abgeschlossen && w.schreibtHier ? h("a", { class: "knopf", href: `#/abend/${s.id}/abrechnung` }, "Abend beenden …") : null, 
         // Nach einer Sicherung auf ein neues Handy: dieses Gerät schreibt den Abend weiter (bewusst im Menü, mit Erklärung).
         !s.abgeschlossen && !w.schreibtHier && !w.amTisch ? [
             h("p", { class: "leise", style: "margin: 0" }, "Schreibt das andere Gerät nicht mehr, zum Beispiel nach einer Sicherung auf ein neues Handy?"),
@@ -181,7 +183,7 @@ function menue(app, r, s) {
                 app.zeigeBlatt(null);
             }
         })),
-    }, "Regeln ändern"), h("a", { class: "knopf", href: `#/abend/${s.id}/abrechnung` }, "Abend abschließen"), h("a", { class: "knopf", href: `#/runde/${r.id}` }, "Zur Runde"), h("a", { class: "knopf", href: "#/", onclick: () => app.zeigeBlatt(null) }, "Zur Startseite"), h("button", { class: "knopf text", onclick: () => app.zeigeBlatt(null) }, "Schließen"));
+    }, "Regeln ändern"), h("a", { class: "knopf", href: `#/abend/${s.id}/abrechnung` }, "Abend beenden …"), h("a", { class: "knopf", href: `#/runde/${r.id}` }, "Zur Runde"), h("a", { class: "knopf", href: "#/", onclick: () => app.zeigeBlatt(null) }, "Zur Startseite"), h("button", { class: "knopf text", onclick: () => app.zeigeBlatt(null) }, "Schließen"));
 }
 /** Spec 016: Rückfrage, bevor dieses Gerät den Abend weiterschreibt. Zwei Geräte sollen nie denselben Abend schreiben. */
 function uebernehmenBlatt(app, r, s) {

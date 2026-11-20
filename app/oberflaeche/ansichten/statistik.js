@@ -33,7 +33,7 @@ function ueberblick(spiele) {
         return "Noch keine Spiele in diesem Zeitraum.";
     const von = spiele[0].datum;
     const bis = spiele.at(-1).datum;
-    return `${abende} ${abende === 1 ? "Abend" : "Abende"} · ${spiele.length} Spiele · ${von === bis ? datumKurz(von) : `${datumKurz(von)} bis ${datumKurz(bis)}`}`;
+    return `${abende} ${abende === 1 ? "Abend" : "Abende"} · ${spiele.length} ${spiele.length === 1 ? "Spiel" : "Spiele"} · ${von === bis ? datumKurz(von) : `${datumKurz(von)} bis ${datumKurz(bis)}`}`;
 }
 /** #/runde/<id>/statistik */
 export function statistik(app, teile) {
@@ -57,7 +57,7 @@ export function statistik(app, teile) {
         onclick: () => { schreibeLokal(ZEITRAUM(r.id), id); app.zeichne(); },
     }, text))), kiSchalter(app, r), h("p", { class: "leise", style: "margin: 0", "data-ueberblick": "" }, ueberblick(spiele)), zeilen.length === 0 ? null : h("section", { class: "karte", "aria-labelledby": "rangliste-titel" }, h("h2", { id: "rangliste-titel" }, "Rangliste"), h("div", { class: "endstand", role: "list" }, zeilen.map((z, i) => h("a", {
         class: "endstand-zeile", role: "listitem", href: `#/runde/${r.id}/spieler/${z.id}`, style: "color: inherit; text-decoration: none",
-    }, h("span", { class: "platz" }, `${zeilen.findIndex((x) => x.punkte === z.punkte) + 1 || i + 1}.`), h("span", { class: "name", style: "display: flex; flex-direction: column" }, h("span", { class: "kuerzen" }, name(z.id)), h("span", { class: "leise", style: "font-size: 13px; font-weight: 400" }, `${z.spiele} Spiele · ${z.abende} ${z.abende === 1 ? "Abend" : "Abende"} · ${z.quote ? gewinnquote.format(z.quote.wert) : "–"} gewonnen`)), h("span", { class: `punkte ${z.punkte > 0 ? "plus" : z.punkte < 0 ? "minus" : ""}`, "data-rang": name(z.id) }, punkteGesamt.format(z.punkte)))))));
+    }, h("span", { class: "platz" }, `${zeilen.findIndex((x) => x.punkte === z.punkte) + 1 || i + 1}.`), h("span", { class: "name", style: "display: flex; flex-direction: column" }, h("span", { class: "kuerzen" }, name(z.id)), h("span", { class: "leise", style: "font-size: 13px; font-weight: 400" }, `${z.spiele} ${z.spiele === 1 ? "Spiel" : "Spiele"} · ${z.abende} ${z.abende === 1 ? "Abend" : "Abende"} · ${z.quote ? gewinnquote.format(z.quote.wert) : "–"} gewonnen`)), h("span", { class: `punkte ${z.punkte > 0 ? "plus" : z.punkte < 0 ? "minus" : ""}`, "data-rang": name(z.id) }, punkteGesamt.format(z.punkte)))))));
 }
 /** #/runde/<id>/spieler/<spielerId> */
 export function spielerProfil(app, teile) {
@@ -81,7 +81,7 @@ export function spielerProfil(app, teile) {
     const liste = werte.filter(({ k }) => !k.kopf);
     const enthaelt = [...zusammenfuehrungenAus(app.ereignisse, r.id)].filter(([, z]) => !z.aufgehoben && z.nach === id);
     const { spiele: ungesicherte, zuletzt } = ungesichert(app, r.id);
-    return h("div", { class: "seite" }, filzkopf(spieler.name, `${r.name} · ${abende} ${abende === 1 ? "Abend" : "Abende"} · ${eigene.length} Spiele${zeitraum === "alle" ? "" : ` · ${zeitraumText}`}`, {
+    return h("div", { class: "seite" }, filzkopf(spieler.name, `${r.name} · ${abende} ${abende === 1 ? "Abend" : "Abende"} · ${eigene.length} ${eigene.length === 1 ? "Spiel" : "Spiele"}${zeitraum === "alle" ? "" : ` · ${zeitraumText}`}`, {
         rechts: h("a", { class: "knopf", href: `#/runde/${r.id}/statistik` }, "Statistik"),
     }), meldung(app), eigene.length === 0
         ? h("p", { class: "leer" }, "Noch keine Spiele in diesem Zeitraum.")

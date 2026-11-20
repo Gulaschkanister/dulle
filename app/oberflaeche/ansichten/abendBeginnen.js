@@ -41,6 +41,6 @@ export function abendBeginnen(app, teile) {
         if (zustand.reihe.length < 4)
             zustand = { ...zustand, reihe: [...zustand.reihe, id] };
         app.zeichne();
-    }))), aktive < 4 ? h("p", { class: "leise" }, `Für einen Abend braucht es vier Spieler. Es fehlen noch ${4 - aktive}, leg sie mit „+ Neu“ an.`) : null), voll ? vorhandWahl(r, zustand, aendern) : null, h("div", { class: "dehnen" }), h("button", { class: "knopf haupt", disabled: !voll, "data-fokus": "beginnen", onclick: () => void beginnen() }, voll ? "Abend beginnen" : "Erst 4 Spieler wählen"));
+    }))), aktive < 4 ? h("p", { class: "leise" }, `Für einen Abend braucht es vier Spieler. Es fehlen noch ${4 - aktive}, leg sie mit „+ Spieler anlegen“ an.`) : null), voll ? vorhandWahl(r, zustand, aendern) : null, h("div", { class: "dehnen" }), h("button", { class: "knopf haupt", disabled: !voll, "data-fokus": "beginnen", onclick: () => void beginnen() }, voll ? "Abend beginnen" : "Erst 4 Spieler wählen"));
 }
 //# sourceMappingURL=abendBeginnen.js.map

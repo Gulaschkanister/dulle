@@ -1,15 +1,11 @@
 // Neue Runde: Name und Spieler in einem Schritt (Spec 006, Mockup „Neu: Runde und Spieler in einem Schritt“).
 // Tipp-Budget: Rundenname + je Spieler Name + Enter + ein Tipp auf die Hauptaktion.
 import { leseLokal, schreibeLokal } from "../app.js";
-import { NACH_ANLEGEN } from "./start.js";
+import { WIE_SPIELT_IHR } from "./runde.js";
 import { filzkopf, meldung } from "../bausteine.js";
 import { h } from "../dom.js";
 let entwurf = { name: "", spieler: [], eingabe: "" };
-let vorbelegt = false;
 export function rundeNeu(app) {
-    if (!vorbelegt && !entwurf.name && leseLokal(NACH_ANLEGEN) === "live")
-        entwurf = { ...entwurf, name: "Unsere Runde" };
-    vorbelegt = true;
     const aendern = (teil) => { entwurf = { ...entwurf, ...teil }; app.zeichne(); };
     const hinzufuegen = () => {
         const name = entwurf.eingabe.trim();
@@ -34,13 +30,10 @@ export function rundeNeu(app) {
                 return;
         }
         entwurf = { name: "", spieler: [], eingabe: "" };
-        vorbelegt = false;
-        // Die Meldung „Lege zuerst eure Runde … an“ ist jetzt erledigt.
         app.melde(null);
-        // Spec 016: Kam man über „Live spielen“, geht es an den Tisch; die Absicht geht nicht verloren.
-        const live = leseLokal(NACH_ANLEGEN) === "live";
-        schreibeLokal(NACH_ANLEGEN, null);
-        app.geheZu(live ? `/runde/${rundeId}/am-handy` : spieler.length < 4 ? `/runde/${rundeId}` : `/runde/${rundeId}/abend-beginnen`);
+        // Spec 018: In die Runde, „Wie spielt ihr?“ ist offen (live oder mit echten Karten).
+        schreibeLokal(WIE_SPIELT_IHR, rundeId);
+        app.geheZu(`/runde/${rundeId}`);
     };
     return h("div", { class: "seite" }, filzkopf("Neue Runde", "Name und Spieler in einem Schritt", { rechts: h("a", { class: "knopf", href: "#/" }, "Abbrechen") }), meldung(app), h("div", { class: "gruppe" }, h("label", { for: "rundenname" }, "Name der Runde"), h("input", {
         type: "text", id: "rundenname", maxlength: 40, placeholder: "Donnerstagsrunde", autocomplete: "off", enterkeyhint: "next",

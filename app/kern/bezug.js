@@ -51,7 +51,7 @@ export function pruefeBezug(typ, daten, k) {
     // Alles Weitere gehört zu einer Sitzung.
     const sitzung = k.sitzung;
     if (!sitzung)
-        return ["Diese Sitzung gibt es auf diesem Gerät nicht."];
+        return ["Diesen Abend gibt es auf diesem Gerät nicht."];
     const offen = () => (sitzung.abgeschlossen ? ["Der Abend ist abgeschlossen. Nimm ihn erst wieder auf, um etwas einzutragen."] : []);
     const nr = d["nr"];
     const spielDa = sitzung.spiele.some((s) => s.nr === nr);

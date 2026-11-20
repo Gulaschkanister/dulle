@@ -39,7 +39,8 @@ export const DDV_TURNIER = {
     },
 };
 export const UNSERE_RUNDE = {
-    id: "unsere-runde", name: "Unsere Runde", version: 4,
+    // Spec 018: angezeigt als „Hausregeln“ (die Kennung bleibt; „Unsere Runde“ stieß mit Rundennamen zusammen).
+    id: "unsere-runde", name: "Hausregeln", version: 4,
     schalter: { ...DDV_TURNIER.schalter, mitNeunen: false, zweiteDulle: "ausserLetzterStich", hochzeitKlaerung: "waehlt", armut: true, armutGrenze: 2, armutFuechseZaehlen: true, soloAufspiel: "solist", schmeissenKoenige: 5, pflichtsolo: false, hochzeitPraemie: 5 },
 };
 export const KNEIPE_KLASSISCH = {

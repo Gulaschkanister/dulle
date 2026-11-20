@@ -292,7 +292,7 @@ export class Gastgeber {
         const r = this.runde();
         const spieler = r ? Object.values(r.spieler).filter((s) => !s.zusammengefuehrtIn && !s.ausgeblendet).map((s) => ({ id: s.id, name: s.name })) : [];
         const sitzt = fuer !== null && this.bestaetigt.has(fuer) && this.z.plaetze[fuer - 1].spielerId !== null;
-        const name = (id) => (id ? (id.startsWith("ki-") ? "KI" : r?.spieler[id]?.name ?? "?") : null);
+        const name = (id) => (id ? (id.startsWith("ki-") ? `KI ${id.slice(3)}` : r?.spieler[id]?.name ?? "?") : null);
         const zustand = (s) => (!s.spielerId ? "frei" : this.bestaetigt.has(s.platz) ? (this.wackelt.has(s.platz) ? "wackelt" : "da") : "weg");
         const w = this.z.wahl;
         return {

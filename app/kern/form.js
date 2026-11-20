@@ -371,12 +371,12 @@ export function pruefeForm(e) {
     const fehler = [];
     if (SITZUNGS_TYPEN.has(typ)) {
         if (ereignis.sitzung === undefined)
-            fehler.push("sitzung: fehlt bei einem Sitzungs-Ereignis");
+            fehler.push("sitzung: fehlt bei einem Ereignis des Abends");
         if (ereignis.seq === undefined)
-            fehler.push("seq: fehlt bei einem Sitzungs-Ereignis");
+            fehler.push("seq: fehlt bei einem Ereignis des Abends");
     }
     else if (ereignis.sitzung !== undefined || ereignis.seq !== undefined) {
-        fehler.push("sitzung: ein Runden-Ereignis gehört zu keiner Sitzung");
+        fehler.push("sitzung: ein Runden-Ereignis gehört zu keinem Abend");
     }
     return [...fehler, ...PRUEFER[typ](ereignis.daten)];
 }

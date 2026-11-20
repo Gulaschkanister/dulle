@@ -123,7 +123,7 @@ export function tischEroeffnen(app, teile) {
         }, "Ändern")), h("p", { class: "leise", style: "margin: 0" }, "Danach lädst du ein: per Link (auch als QR-Code zum Scannen) oder ohne Internet per QR-Tausch im selben WLAN."), h("div", { class: "dehnen" }), h("button", {
             class: "knopf haupt", disabled: !ich || !r.spieler[ich], "data-fokus": "eroeffnen",
             onclick: async () => { merkeProfil(r.id, profil); await eroeffne(app, r.id, profil, ich); app.zeichne(); },
-        }, "Tisch eröffnen"));
+        }, ich && r.spieler[ich] ? "Tisch eröffnen" : "Wähle zuerst dich aus"));
     }
     // ---------- Schritt 2: Plätze und Einladungen ----------
     const g = t.gastgeber;
@@ -154,7 +154,9 @@ export function tischEroeffnen(app, teile) {
         const status = ich ? "du" : ki === "platz" ? "KI" : ki === "fuer" ? "KI spielt" : verbunden && sitz.spielerId && !info.plaetze[p - 1].zurueckgeholt ? "verbunden" : verbunden ? "wählt sich aus" : e?.annehmen ? "wartet auf Antwort"
             : ersatz ? "Ersatz gesucht" : kommt ? "kommt über das Internet zurück …" : sitz.spielerId && !schonLive ? "noch nicht da" : sitz.spielerId ? `weg · ${seit(info.plaetze[p - 1].wegSeit)}` : "frei";
         const knopf = ersatz ? "Ersatz einladen" : sitz.spielerId && laeuft && schonLive ? `${name(sitz.spielerId)} zurückholen` : sitz.spielerId && laeuft ? `${name(sitz.spielerId)} einladen` : sitz.spielerId ? "Neu einladen" : "Einladen";
-        return h("div", { class: "platz-zeile", "data-platz": p, "data-status": status.startsWith("weg") || kommt || status === "noch nicht da" ? "weg" : status }, h("span", { class: "platz-nr" }, String(p)), h("span", { class: "platz-name" }, name(sitz.spielerId) ?? "Platz frei"), h("span", { class: `platz-status ${verbunden ? "ok" : ""}` }, status), 
+        return h("div", { class: "platz-zeile", "data-platz": p, "data-status": status.startsWith("weg") || kommt || status === "noch nicht da" ? "weg" : status }, h("span", { class: "platz-nr" }, String(p)), h("span", { class: "platz-name" }, name(sitz.spielerId) ?? "Platz frei"), 
+        // Spec 018: Am Platz steht „da“ wie in der Ansicht der Mitspieler (data-status bleibt „verbunden“).
+        h("span", { class: `platz-status ${verbunden ? "ok" : ""}` }, status === "verbunden" ? "da" : status), 
         // Spec 017: Knöpfe gemeinsam; wird es eng, brechen sie unter den Namen um (statt „Platz frei“ zu zerquetschen).
         h("span", { class: "platz-aktionen" }, weg === "qr" && !ich && !kommt && (!verbunden || ki === "fuer") ? h("button", { class: "knopf", "data-fokus": `einladen-${p}`, onclick: () => void einladen(app, p) }, knopf) : null, 
         // Spec 013/016: freier Platz vor dem Start mit KI besetzen (bis zu drei), und wieder freigeben.
@@ -185,7 +187,7 @@ export function tischEroeffnen(app, teile) {
             h("details", {}, h("summary", {}, "Code als Text (ohne Kamera)"), h("textarea", { readonly: true, rows: 3, id: `einladung-${p}`, "aria-label": `Einladungs-Link für Platz ${p}` }, e.link), feld, h("button", { class: "knopf", "data-fokus": `uebernehmen-${p}`, onclick: () => void antwortUebernehmen(app, p, feld.value) }, "Antwort übernehmen")),
         ] : h("p", { class: "leise" }, "Antwort übernommen, Verbindung wird aufgebaut …"), e.fehler ? h("p", { class: "hinweis fehler", role: "alert" }, e.fehler) : null);
     };
-    return h("div", { class: "seite" }, filzkopf("Tisch eröffnen", `${r.name} · ${t.gastgeber ? (z.plaetze[z.eigenerPlatz - 1]?.spielerId ? `${name(z.plaetze[z.eigenerPlatz - 1].spielerId)} eröffnet` : "") : ""}`, {
+    return h("div", { class: "seite" }, filzkopf(`${name(z.plaetze[z.eigenerPlatz - 1]?.spielerId ?? null) ?? "Dein"}s Tisch`, `${r.name} · Mitspieler einladen`, {
         rechts: h("a", { class: "knopf", href: `#/runde/${r.id}` }, "Zur Runde"),
     }), meldung(app), h("div", { class: "segment", role: "group", "aria-label": "Einladen" }, [["link", "Per Link (Internet)"], ["qr", "Ohne Internet (QR)"]].map(([id, text]) => h("button", {
         "aria-pressed": String(weg === id), "data-fokus": `weg-${id}`, onclick: () => { schreibeLokal(WEG, id); app.zeichne(); },

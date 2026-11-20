@@ -41,7 +41,7 @@ export async function sichern(app, r) {
     app.melde(`Gesichert als ${name}`, "info");
 }
 /** Knopf „Datei laden“ mit verstecktem Dateifeld. */
-export function ladenKnopf(app, text = "Datei laden", klasse = "knopf") {
+export function ladenKnopf(app, text = "Aus Datei laden", klasse = "knopf") {
     const feld = h("input", {
         type: "file", accept: ".json,application/json", style: "display: none", "aria-label": "Sicherungsdatei wählen",
         onchange: async (e) => {

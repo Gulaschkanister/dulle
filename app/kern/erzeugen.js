@@ -16,7 +16,7 @@ export function erzeugeEreignis(typ, daten, k) {
     };
     if (SITZUNGS_TYPEN.has(typ)) {
         if (k.sitzungId === undefined)
-            return { ok: false, fehler: ["Für dieses Ereignis fehlt die Sitzung."] };
+            return { ok: false, fehler: ["Für dieses Ereignis fehlt der Abend."] };
         ereignis.sitzung = k.sitzungId;
         ereignis.seq = (k.hoechsteSeq ?? 0) + 1;
     }

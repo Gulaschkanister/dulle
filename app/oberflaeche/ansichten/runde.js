@@ -1,14 +1,21 @@
 // Runde: Spieler und vergangene Abende, Hauptaktion „Abend beginnen“ (Mockup „Schreiber · Runde“). Spec 016: danach die
 // Wahl, ob live in der App oder mit echten Karten gespielt wird; beides ist derselbe Abend.
+import { leseLokal, schreibeLokal } from "../app.js";
 import { filzkopf, homeHinweis, kopf, meldung, spielerAnlegenBlatt, spielerBlatt, spielerName } from "../bausteine.js";
 import { datumKurz, h, punkteText } from "../dom.js";
 import { sicherungsBereich } from "../sicherung.js";
 let ausgeblendeteZeigen = false;
+/** Spec 018: Nach „Runde anlegen“ öffnet die Runde einmal das Blatt „Wie spielt ihr?“. */
+export const WIE_SPIELT_IHR = "dulle.wieSpieltIhr";
 export function runde(app, teile) {
     const rundeId = teile[1] ?? "";
     const r = app.runde(rundeId);
     if (!r)
-        return h("div", { class: "seite" }, kopf("Runde nicht gefunden", null), h("a", { class: "knopf", href: "#/" }, "Zur Übersicht"));
+        return h("div", { class: "seite" }, kopf("Runde nicht gefunden", null), h("a", { class: "knopf", href: "#/" }, "Zur Startseite"));
+    if (leseLokal(WIE_SPIELT_IHR) === r.id) {
+        schreibeLokal(WIE_SPIELT_IHR, null);
+        queueMicrotask(() => app.zeigeBlatt(abendBeginnenBlatt(app, r.id)));
+    }
     const spieler = Object.values(r.spieler).filter((s) => !s.zusammengefuehrtIn).sort((a, b) => a.name.localeCompare(b.name, "de"));
     const sichtbar = spieler.filter((s) => !s.ausgeblendet || ausgeblendeteZeigen);
     const anzahlAusgeblendet = spieler.filter((s) => s.ausgeblendet).length;

@@ -52,7 +52,7 @@ export function zaehleHoch(el, von, bis, format) {
 }
 /** Spec 017: Kurzanleitung „So geht ein Abend“ (Startseite und Einstellungen › Hilfe). */
 export function kurzanleitung(offen) {
-    return h("details", { class: "kurzanleitung", ...(offen ? { open: true } : {}) }, h("summary", { "data-fokus": "kurzanleitung" }, "So geht ein Abend"), h("ol", {}, h("li", {}, h("b", {}, "Runde anlegen"), " (einmal): Name und Spieler."), h("li", {}, h("b", {}, "Abend beginnen"), ", live spielen, Tisch eröffnen und den Link teilen."), h("li", {}, "Die anderen öffnen den Link und wählen sich aus. Gespielt wird reihum."), h("li", {}, h("b", {}, "Aufhören:"), " Menü › Abend beenden. Den Stand gibt es jederzeit unter „Stand“.")));
+    return h("details", { class: "kurzanleitung", ...(offen ? { open: true } : {}) }, h("summary", { "data-fokus": "kurzanleitung" }, "So geht ein Abend"), h("ol", {}, h("li", {}, h("b", {}, "Runde anlegen"), " (einmal): Name und Spieler."), h("li", {}, h("b", {}, "Abend beginnen"), ", live spielen, Tisch eröffnen und den Link teilen."), h("li", {}, "Die anderen öffnen den Link und wählen sich aus. Gespielt wird reihum."), h("li", {}, h("b", {}, "Aufhören:"), " Menü › Abend beenden, dann in der Abrechnung „Abend abschließen“. Den Stand gibt es jederzeit unter „Stand“.")));
 }
 const INSTALL_WEG = "dulle.installHinweisWeg";
 /** Spec 017: Positiver Hinweis zum Installieren, wenn der Browser es anbietet, nach dem ersten Abend. */
@@ -97,7 +97,7 @@ export function meldung(app) {
 }
 export function spielerName(runde, spielerId) {
     if (spielerId.startsWith("ki-"))
-        return "KI";
+        return `KI ${spielerId.slice(3)}`;
     return runde?.spieler[spielerId]?.name ?? "Unbekannt";
 }
 /**
@@ -108,6 +108,9 @@ export function spielerName(runde, spielerId) {
 export function kurzNamen(runde, ids) {
     const erstes = (id) => {
         const voll = spielerName(runde, id);
+        // Spec 018: „KI 3“ und „KI 4“ bleiben ganz, sonst stünde zweimal „KI“ im Spielblock.
+        if (id.startsWith("ki-"))
+            return voll;
         return voll.split(/[\s-]/)[0] || voll;
     };
     const ergebnis = {};

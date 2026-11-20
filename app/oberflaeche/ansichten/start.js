@@ -3,36 +3,46 @@
 import { filzkopf, homeHinweis, installBlatt, installHinweis, kurzanleitung, meldung } from "../bausteine.js";
 import { abendBeginnenBlatt } from "./runde.js";
 import { vollbildAn, vollbildSinnvoll } from "../vollbild.js";
-import { h } from "../dom.js";
-import { ladenKnopf } from "../sicherung.js";
-import { leseLokal, schreibeLokal } from "../app.js";
+import { datumKurz, h } from "../dom.js";
+import { leseLokal } from "../app.js";
 import { fortsetzen, fortsetzenAlsMitspieler, gespeicherterTisch, letzterStand, tisch, ueben } from "../tisch.js";
-/** Spec 016: „Live spielen“ ohne Runde: Nach „Runde anlegen“ geht es an den Tisch, nicht zum Schreiber. */
-export const NACH_ANLEGEN = "dulle.nachAnlegen";
 export function start(app) {
     // Ein offener Abend, den dieses Gerät schreibt, öffnet sich beim Start direkt; ein Tisch über den Hinweis unten.
-    const offen = app.ersteAnsicht ? app.offeneSitzung(undefined, true) : undefined;
-    if (offen && !offen.sitzung.kiPlatz && !gespeicherterTisch()) {
+    // Nur die Übungsrunde zählt nicht als offener Abend; ein Live-Abend mit KI-Plätzen schon (Spec 018, Prüfung).
+    const uebenRunde = leseLokal("dulle.uebenRunde") ?? undefined;
+    const offen = app.ersteAnsicht ? app.offeneSitzung(undefined, true, uebenRunde) : undefined;
+    if (offen && !gespeicherterTisch()) {
         queueMicrotask(() => app.geheZu(`/abend/${offen.sitzung.id}`));
         return h("div", { class: "seite" });
     }
     const runden = Object.values(app.sicht).sort((a, b) => a.name.localeCompare(b.name, "de"));
-    const echte = runden.filter((r) => r.id !== leseLokal("dulle.uebenRunde"));
-    return h("div", { class: "seite" }, filzkopf("Dulle", "Doppelkopf mitschreiben und live spielen", { motiv: true, aktionen: h("a", { class: "knopf", href: "#/einstellungen", "data-fokus": "einstellungen" }, "Einstellungen") }), homeHinweis(app), installHinweis(app), meldung(app), tischHinweis(app), h("div", { class: "raster-2", role: "group", "aria-label": "Spielen" }, h("button", { class: "knopf", "data-fokus": "live-spielen", onclick: () => liveSpielen(app, echte) }, "Live spielen"), h("button", {
+    const echte = runden.filter((r) => r.id !== uebenRunde);
+    // Spec 018: eine Hauptaktion oben – zurück an den laufenden Tisch, sonst offenen Abend fortsetzen,
+    // sonst Abend beginnen, sonst Runde anlegen.
+    const rueckweg = tischRueckweg(app);
+    const offenerAbend = app.offeneSitzung(undefined, true, uebenRunde);
+    const haupt = rueckweg
+        ? rueckweg.knopf
+        : offenerAbend
+            ? h("a", { class: "knopf haupt", href: `#/abend/${offenerAbend.sitzung.id}`, "data-fokus": "abend-fortsetzen" }, "Abend fortsetzen")
+            : echte.length > 0
+                ? h("button", { class: "knopf haupt", "data-fokus": "abend-beginnen", "aria-haspopup": "dialog", onclick: () => abendBeginnen(app, echte) }, "Abend beginnen")
+                : h("a", { class: "knopf haupt", href: "#/runde-neu", "data-fokus": "runde-anlegen" }, "Runde anlegen");
+    return h("div", { class: "seite" }, filzkopf("Dulle", "Doppelkopf mitschreiben und live spielen", { motiv: true, aktionen: h("a", { class: "knopf", href: "#/einstellungen", "data-fokus": "einstellungen" }, "Einstellungen") }), homeHinweis(app), installHinweis(app), meldung(app), h("div", { class: "gruppe", role: "group", "aria-label": "Spielen" }, rueckweg ? h("p", { class: "leise", style: "margin: 0", "data-tisch-hinweis": "" }, rueckweg.text) : null, 
+    // Spec 018 (Erstnutzer): Nach „Abend beenden“ ist der Abend noch offen; das steht über dem Knopf.
+    !rueckweg && offenerAbend ? h("p", { class: "leise", style: "margin: 0", "data-abend-hinweis": "" }, `${offenerAbend.runde.name}, ${datumKurz(offenerAbend.sitzung.datum)}: noch nicht abgeschlossen.`) : null, haupt, h("button", {
         class: "knopf", "data-fokus": "ueben",
         onclick: async () => { if (vollbildSinnvoll(app.alsApp))
             vollbildAn(); const f = await ueben(app); if (f)
             app.melde(f);
         else
             app.geheZu("/tisch"); },
-    }, "Gegen die KI üben"), h("button", { class: "knopf", style: "grid-column: 1 / -1", "data-fokus": "einladung-oeffnen", onclick: () => app.zeigeBlatt(einladungBlatt(app)) }, "Einladung öffnen")), kurzanleitung(!echte.some((r) => Object.keys(r.sitzungen).length > 0)), echte.length === 0
-        ? h("p", { class: "leer" }, "Für eure Runde: zuerst unten anlegen, zum Beispiel „Donnerstagsrunde“. Üben geht auch ohne.")
-        : h("nav", { class: "liste", "aria-label": "Runden" }, echte.map((r) => h("a", { href: `#/runde/${r.id}` }, h("span", { style: "flex-grow: 1; font-weight: 600" }, r.name), h("span", { class: "leise" }, `${Object.values(r.spieler).filter((s) => !s.ausgeblendet).length} Spieler`)))), ladenKnopf(app, "Runde aus Datei laden", "knopf text"), 
+    }, "Gegen die KI üben"), h("button", { class: "knopf text", "data-fokus": "einladung-oeffnen", "aria-haspopup": "dialog", onclick: () => app.zeigeBlatt(einladungBlatt(app)) }, "Eingeladen? Link einfügen")), echte.length === 0
+        // Spec 018 (Gestaltung): knapp und ohne den großen Leerraum von .leer, die Hauptaktion steht direkt darüber.
+        ? h("p", { class: "leise", style: "margin: 0" }, "Noch keine Runde. Üben geht auch ohne.")
+        : h("nav", { class: "liste", "aria-label": "Runden" }, echte.map((r) => h("a", { href: `#/runde/${r.id}` }, h("span", { style: "flex-grow: 1; font-weight: 600" }, r.name), h("span", { class: "leise" }, `${Object.values(r.spieler).filter((s) => !s.ausgeblendet).length} Spieler`)))), kurzanleitung(!echte.some((r) => Object.keys(r.sitzungen).length > 0)), echte.length > 0 || !app.alsApp ? h("div", { class: "gruppe", "data-weiteres": "" }, echte.length > 0 ? h("a", { class: "knopf text", href: "#/runde-neu", "data-fokus": "neue-runde" }, "Neue Runde anlegen") : null, 
     // Spec 017 (Live-Test): Installieren immer erreichbar, solange Dulle nicht als App läuft.
-    !app.alsApp ? h("button", { class: "knopf text", "data-fokus": "als-app", "aria-haspopup": "dialog", onclick: () => app.zeigeBlatt(installBlatt(app)) }, "Als App installieren") : null, h("div", { class: "dehnen" }), echte.length === 0
-        ? h("a", { class: "knopf haupt", href: "#/runde-neu", "data-fokus": "runde-anlegen" }, "Runde anlegen")
-        : [h("button", { class: "knopf haupt", "data-fokus": "abend-beginnen", "aria-haspopup": "dialog", onclick: () => abendBeginnen(app, echte) }, "Abend beginnen"),
-            h("a", { class: "knopf text", href: "#/runde-neu", "data-fokus": "runde-anlegen" }, "Neue Runde anlegen")]);
+    !app.alsApp ? h("button", { class: "knopf text", "data-fokus": "als-app", "aria-haspopup": "dialog", onclick: () => app.zeigeBlatt(installBlatt(app)) }, "Als App installieren") : null) : null);
 }
 /** Spec 017: Hauptweg mit vorhandener Runde. Eine Runde → „Wie spielt ihr?“, mehrere → zuerst die Runde wählen. */
 function abendBeginnen(app, runden) {
@@ -43,22 +53,6 @@ function abendBeginnen(app, runden) {
         href: "#/", onclick: (e) => { e.preventDefault(); app.zeigeBlatt(abendBeginnenBlatt(app, r.id)); },
     }, h("span", { style: "flex-grow: 1; font-weight: 600" }, r.name)))), h("button", { class: "knopf text", onclick: () => app.zeigeBlatt(null) }, "Abbrechen")));
     app.zeigeBlatt(abendBeginnenBlatt(app, sortiert[0].id, sortiert.length > 1 ? waehlen : undefined));
-}
-/** Live spielen: eine Runde → direkt zum Tisch eröffnen; mehrere → erst die Runde wählen; keine → erst anlegen. */
-function liveSpielen(app, runden) {
-    if (runden.length === 0) {
-        app.melde("Lege zuerst eure Runde an. Danach geht es direkt an den Tisch.", "info");
-        schreibeLokal(NACH_ANLEGEN, "live");
-        app.geheZu("/runde-neu");
-        return;
-    }
-    if (runden.length === 1) {
-        app.geheZu(`/runde/${runden[0].id}/am-handy`);
-        return;
-    }
-    app.zeigeBlatt(h("div", { class: "gruppe" }, h("h2", { id: "live-titel" }, "Mit welcher Runde?"), h("nav", { class: "liste", "aria-labelledby": "live-titel" }, runden.map((r) => h("a", {
-        href: `#/runde/${r.id}/am-handy`, onclick: () => app.zeigeBlatt(null),
-    }, h("span", { style: "flex-grow: 1; font-weight: 600" }, r.name)))), h("button", { class: "knopf text", onclick: () => app.zeigeBlatt(null) }, "Abbrechen")));
 }
 /**
  * Einladung öffnen: Link oder Code einfügen, wenn man ihn nicht antippen kann (z. B. am PC aus einer Nachricht).
@@ -91,19 +85,26 @@ function einladungBlatt(app) {
     };
     return h("div", { class: "gruppe" }, h("h2", {}, "Einladung öffnen"), h("p", { class: "leise", style: "margin: 0" }, "Hast du einen Link oder Code bekommen? Hier einfügen. Antippen geht auch, dann öffnet sich der Tisch von selbst."), feld, h("button", { class: "knopf haupt", "data-fokus": "einladung-los", onclick: oeffnen }, "Öffnen"), h("button", { class: "knopf text", onclick: () => app.zeigeBlatt(null) }, "Abbrechen"));
 }
-/** Läuft ein Tisch am Handy (oder hat dieses Gerät einen eröffnet), geht es von hier zurück. */
-function tischHinweis(app) {
+/** Läuft ein Tisch am Handy (oder hat dieses Gerät einen eröffnet), ist „Zurück an den Tisch“ die Hauptaktion. */
+function tischRueckweg(app) {
     const t = tisch();
+    // Der eigene Tisch läuft noch (z. B. über „Zur Startseite“ im Tisch-Menü hierher gekommen).
+    if (t?.gastgeber) {
+        return { text: "Dein Tisch läuft noch.",
+            knopf: h("a", { class: "knopf haupt", href: t.gastgeber.spiel ? "#/tisch" : `#/runde/${t.rundeId}/am-handy`, "data-fokus": "zum-tisch" }, "Zurück an den Tisch") };
+    }
     if (t?.client?.sicht)
-        return h("div", { class: "hinweis info" }, h("div", { style: "flex-grow: 1" }, "Du sitzt an einem Tisch."), h("a", { class: "knopf", href: "#/tisch", "data-fokus": "zum-tisch" }, "Zurück an den Tisch"));
+        return { text: "Du sitzt an einem Tisch.", knopf: h("a", { class: "knopf haupt", href: "#/tisch", "data-fokus": "zum-tisch" }, "Zurück an den Tisch") };
     const g = gespeicherterTisch();
     if (!t && g) {
-        return h("div", { class: "hinweis info" }, h("div", { style: "flex-grow: 1" }, "Du hast einen Tisch eröffnet, der noch läuft."), h("button", { class: "knopf", "data-fokus": "tisch-fortsetzen", onclick: async () => { await fortsetzen(app); app.geheZu(`/runde/${g.rundeId}/am-handy`); } }, "Fortsetzen"));
+        return { text: "Du hast einen Tisch eröffnet, der noch läuft.",
+            knopf: h("button", { class: "knopf haupt", "data-fokus": "tisch-fortsetzen", onclick: async () => { await fortsetzen(app); app.geheZu(`/runde/${g.rundeId}/am-handy`); } }, "Zurück an den Tisch") };
     }
     // Spec 012: Mitspieler nach Neuladen. Der letzte Stand bleibt sichtbar, bis der Gastgeber ihn zurückholt.
     const stand = letzterStand();
     if (!t && stand) {
-        return h("div", { class: "hinweis info" }, h("div", { style: "flex-grow: 1" }, `Zurück an den Tisch bei ${stand.tisch.gastgeberName}?`), h("button", { class: "knopf", "data-fokus": "tisch-zurueck", onclick: () => { fortsetzenAlsMitspieler(app); app.geheZu("/tisch"); } }, "Zurück an den Tisch"));
+        return { text: `Zurück an den Tisch bei ${stand.tisch.gastgeberName}?`,
+            knopf: h("button", { class: "knopf haupt", "data-fokus": "tisch-zurueck", onclick: () => { fortsetzenAlsMitspieler(app); app.geheZu("/tisch"); } }, "Zurück an den Tisch") };
     }
     return null;
 }
